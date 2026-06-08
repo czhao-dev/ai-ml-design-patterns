@@ -1,0 +1,6 @@
+build/
+models/*.tge
+.DS_Store
+.cache/
+.vscode/
+compile_commands.json
