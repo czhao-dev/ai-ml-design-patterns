@@ -15,7 +15,7 @@ That folder is ignored by Git. For public sharing, upload large model files to o
 
 ## Local Artifacts
 
-The local trained artifacts from the completed notebooks are:
+The local trained artifacts from the completed model runs are:
 
 | File | Model |
 |---|---|

@@ -20,9 +20,11 @@ Classify satellite image tiles into agricultural and non-agricultural land categ
 | Keras CNN-ViT Hybrid | 0.9958 | 0.9990 | 0.9927 | 0.9958 | 0.9998 | 0.0530 |
 | PyTorch CNN-ViT Hybrid | 0.9990 | 0.9990 | 0.9990 | 0.9990 | 1.0000 | 0.0047 |
 
+> **Methodology note:** These metrics are computed by evaluating each model over the full `images_dataSAT` dataset (6,000 images), which overlaps with the data used to train that model. They reflect fit quality, not held-out generalization performance. A held-out evaluation is listed under Future Work.
+
 ## Interpretation
 
-All models performed strongly on the balanced satellite image dataset. The PyTorch CNN and PyTorch CNN-ViT hybrid produced the highest overall scores in these notebook runs.
+All models performed strongly on the balanced satellite image dataset. The PyTorch CNN and PyTorch CNN-ViT hybrid produced the highest overall scores in these recorded runs.
 
 The CNN baselines were already highly effective, suggesting that local visual patterns in the satellite tiles are strong indicators of agricultural land. The CNN-ViT hybrids add a transformer component that can model broader spatial relationships, which is useful for land-use imagery where texture, field boundaries, and larger spatial patterns can matter together.
 

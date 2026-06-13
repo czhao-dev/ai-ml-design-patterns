@@ -1,6 +1,6 @@
 # Satellite Land Classification with CNNs and Vision Transformers
 
-This portfolio project classifies satellite image tiles as **agricultural** or **non-agricultural** land using deep learning models built in both Keras/TensorFlow and PyTorch.
+This project classifies satellite image tiles as **agricultural** or **non-agricultural** land using deep learning models built in both Keras/TensorFlow and PyTorch.
 
 The work progresses from data-loading experiments to CNN baselines, then to CNN-Vision Transformer hybrid models that combine local feature extraction with global attention.
 
@@ -22,13 +22,13 @@ The dataset contains 6,000 JPG satellite tiles:
 | `class_0_non_agri` | Non-agricultural land | 3,000 |
 | `class_1_agri` | Agricultural land | 3,000 |
 
-The original lab notebooks download the dataset from IBM Skills Network cloud storage:
+The project data pipeline downloads the dataset from IBM Skills Network cloud storage:
 
 ```text
 https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/4Z1fwRR295-1O3PMQBH6Dg/images-dataSAT.tar
 ```
 
-Large local data files are kept out of Git. See `data/README.md` for setup notes.
+Large local data files are kept out of Git. See `data/data.md` for setup notes.
 
 ## Results
 
@@ -41,59 +41,56 @@ Large local data files are kept out of Git. See `data/README.md` for setup notes
 
 The PyTorch models achieved the strongest scores in these runs, with the final PyTorch CNN-ViT hybrid reaching 99.90% accuracy.
 
+> **Methodology note:** These numbers come from evaluating each model over the full `images_dataSAT` dataset, which overlaps with the data used to train that model. They reflect fit quality on the full dataset rather than held-out generalization performance. See [Next Improvements](#next-improvements) for a planned held-out evaluation.
+
 ## Repository Structure
 
 ```text
 .
 ├── data/
-│   ├── README.md
-│   └── raw/                  # Local dataset archive, ignored by Git
+│   └── data.md
 ├── models/
-│   ├── README.md
-│   └── trained/              # Local model artifacts, ignored by Git
-├── notebooks/
-│   ├── 01_data_loading_memory_vs_generator.ipynb
-│   ├── 02_keras_data_pipeline.ipynb
-│   ├── 03_pytorch_data_pipeline.ipynb
-│   ├── 04_keras_cnn_classifier.ipynb
-│   ├── 05_pytorch_cnn_classifier.ipynb
-│   ├── 06_keras_vs_pytorch_cnn_comparison.ipynb
-│   ├── 07_keras_cnn_vit_hybrid.ipynb
-│   ├── 08_pytorch_cnn_vit_hybrid.ipynb
-│   └── 09_final_cnn_vit_evaluation.ipynb
+│   └── models.md
 ├── reports/
 │   ├── figures/
 │   └── results_summary.md
-├── scripts/                # Python exports of the notebooks
+├── scripts/
+│   ├── 01_data_loading_memory_vs_generator.py
+│   ├── 02_keras_data_pipeline.py
+│   ├── 03_pytorch_data_pipeline.py
+│   ├── 04_keras_cnn_classifier.py
+│   ├── 05_pytorch_cnn_classifier.py
+│   ├── 06_keras_vs_pytorch_cnn_comparison.py
+│   ├── 07_keras_cnn_vit_hybrid.py
+│   ├── 08_pytorch_cnn_vit_hybrid.py
+│   └── 09_final_cnn_vit_evaluation.py
 ├── src/
 │   ├── config.py
 │   ├── data_utils.py
 │   ├── metrics.py
 │   └── visualization.py
-├── .gitignore
 ├── LICENSE
+├── README.md
 └── requirements.txt
 ```
 
-## Notebook Guide
-
-Run the notebooks in order if you want to reproduce the full workflow:
-
-1. Compare memory-based and generator-based image loading.
-2. Build Keras data loading and augmentation pipelines.
-3. Build PyTorch data loading and augmentation pipelines.
-4. Train and evaluate a Keras CNN classifier.
-5. Train and evaluate a PyTorch CNN classifier.
-6. Compare Keras and PyTorch CNN models.
-7. Build a Keras CNN-ViT hybrid model.
-8. Build a PyTorch CNN-ViT hybrid model.
-9. Evaluate and compare the final CNN-ViT hybrid models.
-
 ## Python Scripts
 
-The `scripts/` folder contains cleaned `.py` exports of the notebooks. These are included so GitHub reviewers can browse the project as source code without opening every notebook.
+The `scripts/` folder contains the project workflow as Python source code, organized from data loading through final model evaluation.
 
-The notebooks remain the best narrative version because they preserve explanations, outputs, and visualizations. The scripts are better for quick code review, search, and future refactoring.
+The Python scripts are:
+
+1. `01_data_loading_memory_vs_generator.py`
+2. `02_keras_data_pipeline.py`
+3. `03_pytorch_data_pipeline.py`
+4. `04_keras_cnn_classifier.py`
+5. `05_pytorch_cnn_classifier.py`
+6. `06_keras_vs_pytorch_cnn_comparison.py`
+7. `07_keras_cnn_vit_hybrid.py`
+8. `08_pytorch_cnn_vit_hybrid.py`
+9. `09_final_cnn_vit_evaluation.py`
+
+These scripts are intended for code review, search, and future refactoring.
 
 ## Setup
 
@@ -105,19 +102,20 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Then launch Jupyter:
+Run or inspect the Python scripts in `scripts/` for the source workflow.
 
-```bash
-jupyter notebook
-```
+## Project Background
 
-## Portfolio Notes
-
-This project began as an IBM/Coursera deep learning capstone lab sequence. I reorganized it into a portfolio-ready repository with a clear workflow, documented results, reusable helper modules, and GitHub-friendly handling for large data and model artifacts.
+This project began as an IBM/Coursera deep learning capstone sequence. It has since been reorganized to include a clear Python workflow, documented results, reusable helper modules, and handling for large data and model artifacts.
 
 ## Next Improvements
 
 - Add a small inference script for classifying a new satellite tile.
-- Export selected plots from notebooks into `reports/figures/`.
+- Export selected plots from model runs into `reports/figures/`.
 - Add a lightweight Streamlit demo for interactive predictions.
 - Track experiments with a reproducible configuration file.
+
+## License
+
+This project is licensed under the Apache License 2.0. See [`LICENSE`](LICENSE) for the full license text.
+

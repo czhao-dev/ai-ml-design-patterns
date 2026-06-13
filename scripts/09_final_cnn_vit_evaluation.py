@@ -1,99 +1,12 @@
 #!/usr/bin/env python3
-# Exported from notebooks/09_final_cnn_vit_evaluation.ipynb
-# This script is a linearized version of the notebook for code review and portfolio browsing.
-# Some cells may still require a notebook/runtime environment, downloaded data, or trained model artifacts.
 
 import asyncio
 
 
-# %% [markdown] cell 1
-# <div style="text-align: center;">
-#   <a href="https://cognitiveclass.ai/?utm_medium=Exinfluencer&utm_source=Exinfluencer&utm_content=000026UJ&utm_term=10006555&utm_id=NA-SkillsNetwork-Channel-SkillsNetworkCoursesIBMDeveloperSkillsNetworkDL0321ENSkillsNetwork951-2022-01-01">
-#     <img src="https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBMDeveloperSkillsNetwork-DL0321EN-SkillsNetwork/image/IDSN-logo.png" width="400">
-#   </a>
-# </div>
-
-# %% [markdown] cell 2
-# <h1 align=left><font size = 6>Lab: Land Classification: CNN-Transformer Integration evaluation </font></h1>
-#     
-# <h2 align=left><font size = 5>Vision Transformer (ViT) Model Evaluation </font></h2>
-
-# %% [markdown] cell 3
-# Estimated time: 90 minutes
-
-# %% [markdown] cell 4
-# # Introdution
-#
-# This notebook presents an end-to-end workflow for importing, testing, and evaluating two Vision Transformer (ViT) models developed in Keras and PyTorch, respectively. 
-# The self-attention mechanism in the ViTs allows these models to learn complex and broad spatial dependencies, providing improved performance on a variety of vision tasks compared to traditional convolutional neural networks. However, the CNNs are adept in learning the local features very well and can be trained using relatively smaller datasets and is generally much more efficient in utilizing the computational resources, as compared to ViTs. A CNN-ViT hybrid architecture gains from both CNN and ViT model strengths, by getting local features extracted using CNNs, while the transformer part of the hybrid architecture can determine the global dependencies.
-#
-# This lab focuses on model loading, prediction on sample data, and quantitative evaluation of the ViT models created using KEras and PyTorch. You'll explore the details of the framework-specific implementations, test the consistency of results, and gain practical experience comparing deep learning models across different Python ecosystems. 
-#
-# Upon completion, you will have a thorough understanding of loading the CNN-ViT hybrid models testing workflow, key evaluation metrics, and how high-level architectural concepts translate into practical model evaluation using both Keras and PyTorch.
-
-# %% [markdown] cell 5
-# ## Objectives
-#
-# - Import and initialize pre-trained CNN - Vision Transformer hybrid models from two deep learning frameworks (Keras/TensorFlow and PyTorch).
-# - Prepare and preprocess sample image data for inference.
-# - Perform model inference and obtain prediction results from both models.
-# - Compute and compare core evaluation metrics.
-
-# %% [markdown] cell 6
-# ## Table of Contents
-# 1. [Dataset download, extraction and paths](#Dataset-download,-extraction-and-paths)
-# 2. [Pre-trained model download](#Pre-trained-model-download)
-# 3. [Package installation](#Package-installation)
-# 4. [Library imports and setup](#Library-imports-and-setup)
-# 5. [Fix random seed for reproducibility](#Fix-random-seed-for-reproducibility)
-# 6. [Defining PyTorch model architecture](#Defining-PyTorch-model-architecture)
-# 7. [Dataset path and hyperparameters](#Dataset-path-and-hyperparameters)
-# 8. [PyTorch Dataloader](#PyTorch-Dataloader)
-# 9. [--- PyTorch pre-trained ViT model loading ---](#----PyTorch-pre-trained-ViT-model-loading----)
-# 10. [PyTorch model inference metrics](#PyTorch-model-inference-metrics)
-# 11. [Keras model loading](#Keras-model-loading)
-# 12. [--- Keras ViT pre-trained model loading ---](#----Keras-pre-trained-ViT-model-loading----)
-# 13. [Define dataloader](#Define-dataloader)
-# 14. [Collecting metrics for Keras-based CNN-ViT hybrid model](#Collecting-metrics-for-Keras-based-CNN-ViT-hybrid-model)
-# 15. [Import the evaluation metrics](#Import-the-evaluation-metrics)
-# 16. [Keras metrics reporting](#Keras-metrics-reporting)
-# 17. [PyTorch metrics reporting](#PyTorch-metrics-reporting)
-# 18. [ROC curve plotting](#ROC-curve-plotting)
-# 19. [Comparing model performance](#Comparing-model-performance)
-# 20. [Summary and discussion](#Summary-and-discussion)
-# 21. [Conclusion](#Conclusion)
-
-# %% [markdown] cell 7
-# ## Dataset download, extraction and paths
-# We begin by downloading the dataset for evaluation of the models.
-# Here, you declare:
-# 1. The dataset URL from where the dataset would be downloaded.
-# 2. The dataset downloading primary function, based on `skillsnetwork` library.
-# 3. The dataset fallback downloading function, based on regular `http` downloading functions.
-
-# %% [markdown] cell 8
-# ### Define root directory and download `url`
-#
-# First, you define the root directory where all the data would be downloaded and extracted.
-# Here, the `dataset_url` is assigned a direct link to a tar archive hosted on IBM's cloud storage. This URL points to the satellite image dataset used for land classification tasks. Using a cloud-based URL ensures accessibility without local storage dependencies. This setup facilitates automated downloads later in the notebook. 
-#
-# If dealing with large datasets, monitor download times and implement retry mechanisms for robustness. This variable is key for the subsequent download functions, linking external data to the local workflow.
-
-# %% [code] cell 9
 data_dir = "."
 
-# %% [code] cell 10
 dataset_url = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/4Z1fwRR295-1O3PMQBH6Dg/images-dataSAT.tar"
 
-# %% [markdown] cell 11
-# ### Data download
-# We begin by downloading the dataset for evaluation of the models.
-# Here, you declare:
-# 1. The dataset downloading primary function, based on `skillsnetwork` library.
-# 2. The dataset fallback downloading function, based on regular `http` downloading functions.
-# 3. Download the dataset
-
-# %% [code] cell 12
 import os
 import skillsnetwork
 
@@ -140,13 +53,6 @@ except Exception as e:
     tar_path = os.path.join(data_dir, file_name)
     asyncio.run(download_tar_dataset(dataset_url, tar_path, data_dir))
 
-# %% [markdown] cell 13
-# ## Pre-trained model download 
-#
-# Now, define an asynchronous function to download model files from given URLs, if they are not already present locally. 
-# You use `httpx` for asynchronous HTTP requests with error handling.
-
-# %% [code] cell 14
 async def download_model(url, model_path):
     if not os.path.exists(model_path):
         try:
@@ -163,12 +69,6 @@ async def download_model(url, model_path):
     else:
         print(f"Model file already downloaded at: {model_path}")
 
-# %% [markdown] cell 15
-# ## Model paths and download
-#
-# In the cell below, you define the file paths and URLs for the Keras and PyTorch models and download them using the `download_model` function defined above.
-
-# %% [code] cell 16
 data_dir = "."
 
 keras_model_url = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/7uNMQhNyTA8qSSDGn5Cc7A/keras-cnn-vit-ai-capstone.keras"
@@ -182,53 +82,7 @@ pytorch_state_dict_path = os.path.join(data_dir, pytorch_state_dict_name)
 asyncio.run(download_model(keras_model_url, keras_model_path))
 asyncio.run(download_model(pytorch_state_dict_url, pytorch_state_dict_path))
 
-# %% [markdown] cell 17
-# ## Package installation
-#
-# Install the required basic Python packages. 
 
-# %% [code] cell 18
-# Notebook-only command: %%time
-# Notebook-only command: %%capture captured_output
-# Notebook-only command: %pip install numpy==1.26
-# Notebook-only command: %pip install matplotlib==3.9.2
-# Notebook-only command: %pip install skillsnetwork
-
-# %% [markdown] cell 19
-# ### Install PyTorch library
-
-# %% [code] cell 20
-# Notebook-only command: %%time
-# Notebook-only command: %pip install torch==2.7.0
-
-# %% [markdown] cell 21
-# ### Install PyTorch helper libraries
-
-# %% [code] cell 22
-# Notebook-only command: %%time
-# Notebook-only command: %pip install torchvision==0.22
-
-# %% [markdown] cell 23
-# ### Install tensorflow library for Keras
-
-# %% [code] cell 24
-# Notebook-only command: %%time
-# Notebook-only command: %pip install tensorflow==2.19
-
-# %% [markdown] cell 25
-# ### Install SkLearn library for evaluation metrics
-
-# %% [code] cell 26
-# Notebook-only command: %%time
-# Notebook-only command: %pip install scikit-learn==1.7.0
-
-# %% [markdown] cell 27
-# ## Library imports and setup
-#
-# Import essential libraries for data manipulation, visualization, and suppresses warnings for cleaner notebook output.
-
-# %% [code] cell 28
-# Notebook-only command: %%time
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -240,13 +94,6 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-# %% [markdown] cell 29
-# ### TensorFlow/Keras library imports
-#
-# These imports set the environment variables to reduce TensorFlow logging noise and imports Keras modules for model building and training. They detect GPU availability for device assignment.
-
-# %% [code] cell 30
-# Notebook-only command: %%time
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -259,13 +106,6 @@ gpu_list = tf.config.list_physical_devices('GPU')
 device = "gpu" if gpu_list != [] else "cpu"
 print(f"TensorFlow {tf.__version__}  |  GPUs found: {tf.config.list_physical_devices('GPU')}")
 
-# %% [markdown] cell 31
-# ### PyTorch library imports
-#
-# Import core PyTorch modules for model building, optimization, data loading, and functional utilities.
-
-# %% [code] cell 32
-# Notebook-only command: %%time
 import torch
 import torch.nn as nn
 #import torch.optim as optim
@@ -277,14 +117,6 @@ import torch.nn.functional as F
 
 print("Imported libraries")
 
-# %% [markdown] cell 33
-# ## Fix random seed for reproducibility
-#
-# Define `set_seed` to ensure reproducibility across Python, NumPy, TensorFlow, and PyTorch by seeding random generators and enabling deterministic cuDNN. 
-#
-# Set `SEED` to 7331. This is useful for consistent results in stochastic processes like training or inference.
-
-# %% [code] cell 34
 #====================
 def set_seed(seed: int = 42) -> None:
     """Seed Python, NumPy, tensorflow, and PyTorch (CPU & all GPUs) and
@@ -309,11 +141,6 @@ SEED = 7331
 set_seed(SEED)
 print(f"Global seed set to {SEED} - Processes are now deterministic.")
 
-# %% [markdown] cell 35
-# ## Model paths 
-# Check for the existence of the Keras and PyTorch model files. This ensures models are accessible before loading, preventing runtime errors. Use absolute paths for reliability.
-
-# %% [code] cell 36
 if not os.path.exists(keras_model_path):
     print("Unable to find the Keras model at give path. Please check...")
 else:
@@ -324,15 +151,6 @@ if not os.path.exists(pytorch_state_dict_path):
 else:
     print(f"Found the pre-trained PyTorch model:\n{pytorch_state_dict_name} --at------> {pytorch_state_dict_path}")
 
-# %% [markdown] cell 37
-# ## Defining PyTorch model architecture
-# In this cell, you will define the PyTorch CNN-ViT model architegcture, exactly as defined during the model training. You define the classes for CNN feature extractor, patch embedding, multi-head self-attention, transformer block, ViT, and CNN-ViT hybrid. 
-#
-# The `evaluate` function computes loss and accuracy. This architecture combines CNN local features with ViT global attention. 
-#
-# Parameters like depth and heads are configurable, and defined same as during training.
-
-# %% [code] cell 38
 #====================
 class ConvNet(nn.Module):
     ''' 
@@ -359,7 +177,7 @@ class ConvNet(nn.Module):
 
     def forward_features(self, x: torch.Tensor) -> torch.Tensor:
         return self.features(x)
-    
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.forward_features(x)   # features, dimensions:(B, 1024, H', W')
         x = self.pool(x)               # global-average-pooling, dimensions: (B, 1024, 1, 1)
@@ -371,7 +189,7 @@ class PatchEmbed(nn.Module):
     def __init__(self, input_channel=1024, embed_dim=768):
         super().__init__()
         self.proj = nn.Conv2d(input_channel, embed_dim, kernel_size=1)  # 1×1 conv
-    
+
     def forward(self, x):
         x = self.proj(x).flatten(2).transpose(1, 2)  # (B,L,D)
         return x
@@ -386,7 +204,7 @@ class MHSA(nn.Module):
         self.attn_drop = nn.Dropout(dropout)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(dropout)
-    
+
     def forward(self, x):
         B, N, D = x.shape
         q, k, v = self.qkv(x).chunk(3, dim=-1)
@@ -410,7 +228,7 @@ class TransformerBlock(nn.Module):
                                     nn.GELU(), nn.Dropout(dropout),
                                     nn.Linear(int(dim * mlp_ratio), dim),
                                     nn.Dropout(dropout))
-    
+
     def forward(self, x):
         x = x + self.attn(self.norm1(x))
         x = x + self.mlp(self.norm2(x))
@@ -450,9 +268,33 @@ class CNN_ViT_Hybrid(nn.Module):
                        embed_dim=embed_dim,
                        depth=depth,
                        heads=heads)
-    
+
     def forward(self, x):
         return self.vit(self.cnn.forward_features(x))
+
+def load_cnn_backbone_weights(cnn_model, state_dict_path, map_location):
+    """Load matching weights from a standalone CNN checkpoint into ConvNet.features."""
+    state_dict = torch.load(state_dict_path, map_location=map_location)
+    if isinstance(state_dict, dict) and "state_dict" in state_dict:
+        state_dict = state_dict["state_dict"]
+
+    cnn_state = cnn_model.state_dict()
+    mapped_state = {}
+    for key, value in state_dict.items():
+        normalized_key = key.removeprefix("module.")
+        normalized_key = normalized_key.removeprefix("cnn.")
+        candidates = (normalized_key, f"features.{normalized_key}")
+        for candidate in candidates:
+            if candidate in cnn_state and cnn_state[candidate].shape == value.shape:
+                mapped_state[candidate] = value
+                break
+
+    missing, unexpected = cnn_model.load_state_dict(mapped_state, strict=False)
+    print(f"Loaded {len(mapped_state)} CNN backbone tensors from {state_dict_path}")
+    if missing:
+        print(f"Missing CNN tensors left at initialization: {len(missing)}")
+    if unexpected:
+        print(f"Unexpected CNN tensors ignored: {len(unexpected)}")
 
 #====================
 def evaluate(model, loader, criterion, device):
@@ -467,29 +309,6 @@ def evaluate(model, loader, criterion, device):
             correct  += (out.argmax(1) == y).sum().item()
     return loss_sum / len(loader.dataset), correct / len(loader.dataset)# Set device
 
-# %% [markdown] cell 39
-# ## Dataset path and hyperparameters
-# Here, you set the dataset path and hyperparameters like image size, channels, batch size, classes, and labels. These are used for data loading and model configuration. Consistent dimensions ensure compatibility with model inputs.
-
-# %% [markdown] cell 40
-# ## Task 1: Define the dataset directory, dataloader and model hyperparameters. The dataloader and model hyperparameters should be same as used during training 
-#
-# - Define the `dataset_path`
-#
-# - Define **hyperparameters common dataloader**
-#     - `img_w`, `img_h = 64, 64`
-#     - `batch_size = 128`
-#     - `num_classes = 2`
-#     - `agri_class_labels = ["non-agri", "agri"]`
-#
-#   
-# - Define **hyperparameters for PyTorch CNN-Vit Hybrid model**. The values have to same as those used while training the hybrid model. 
-#     - `depth = 3`
-#     - `attn_heads = 6`
-#     - `embed_dim = 768`
-#
-
-# %% [code] cell 41
 dataset_path = os.path.join(data_dir, "images_dataSAT")
 
 # hyperparameters common dataloader
@@ -503,30 +322,6 @@ depth = 3
 attn_heads = 6
 embed_dim = 768
 
-# %% [markdown] cell 42
-# Double-click **here** for the solution.
-# <!--
-# dataset_path = os.path.join(data_dir, "images_dataSAT")
-#
-# # hyperparameters common dataloader
-# img_w, img_h = 64, 64
-# batch_size = 128
-# num_classes = 2
-# agri_class_labels = ["non-agri", "agri"]
-#
-# # hyperparameters for PyTorch CNN-Vit Hybrid model
-# depth = 3
-# attn_heads = 6
-# embed_dim = 768
-# -->
-
-# %% [markdown] cell 43
-# ### PyTorch Dataloader
-# Defines transforms for resizing, tensor conversion, and normalization (ImageNet means/std). 
-#
-# Loads dataset with ImageFolder and creates DataLoader for batching without shuffling for evaluation.
-
-# %% [code] cell 44
 train_transform = transforms.Compose([
     transforms.Resize((img_w, img_h)),
     transforms.ToTensor(),
@@ -535,18 +330,6 @@ train_transform = transforms.Compose([
 full_dataset = datasets.ImageFolder(dataset_path, transform=train_transform)
 test_loader = DataLoader(full_dataset, batch_size=batch_size, shuffle=False)
 
-# %% [markdown] cell 45
-# ## Task 2: Instantiate PyTorch model
-# Check the availability of CUDA device and set the `device` parameter accordingly.
-#
-# Based on the `CNN_ViT_Hybrid` function, instantiate the PyTorch model and move the model to the available `device`
-#
-# In this cell, you will:
-# 1. instantiate the PyTorch CNN_ViT_Hybrid with the previously declared model parameters
-# 3. detect the device for model inference
-#  
-
-# %% [code] cell 46
 # Check device availability
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -556,50 +339,18 @@ pytorch_model = CNN_ViT_Hybrid(num_classes=num_classes,
                       depth=depth,
                       embed_dim=embed_dim).to(device)
 
-# %% [markdown] cell 47
-# Double-click **here** for the solution.
-# <!--
-# # Check device availability
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-#
-# # Create model instance
-# pytorch_model = CNN_ViT_Hybrid(num_classes=num_classes,
-#                       heads=attn_heads,
-#                       depth=depth,
-#                       embed_dim=embed_dim).to(device)
-# -->
-
-# %% [code] cell 48
 print(f"Evaluating the PyTorch model on {device}")
 
-# %% [markdown] cell 49
-# ### --- PyTorch pre-trained ViT model loading ---
-# In this cell, you will load the PyTorch model state dict with **`strict=False`** for flexibility.
-#
-# Thus, you prepare the model for inference.
-
-# %% [code] cell 50
 # Load pre-trained CNN-ViT hybrid model weights 
 if device=="cpu":
     map_location=torch.device("cpu")
 else:
     map_location=torch.device("cuda")
 
+load_cnn_backbone_weights(pytorch_model.cnn, pytorch_state_dict_path, map_location=map_location)
 pytorch_model.load_state_dict(torch.load(pytorch_state_dict_path, map_location=map_location), strict=False)
 print("Loaded model state dict, now getting predictions")
 
-# %% [markdown] cell 51
-# ### PyTorch model inference metrics
-#
-# Now, you perform:
-# 1. inference on test_loader
-# 2. collecte prediction, labels, and probabilities (for class 1)
-# 3. Uses no_grad for efficiency and eval mode
-# 4. Use tqdm to show progress.
-# 5. Move the data to the training device (CPU/GPU).
-
-# %% [code] cell 52
-# Notebook-only command: %%time
 all_preds_pytorch = []
 all_labels_pytorch = []
 all_probs_pytorch = []
@@ -612,22 +363,10 @@ with torch.no_grad():
         outputs = pytorch_model(images)
         preds = torch.argmax(outputs, dim=1)
         probs = F.softmax(outputs, dim=1)[:, 1]  # probability for class 1
-        all_probs_pytorch.extend(probs.cpu())
+        all_probs_pytorch.extend(probs.cpu().numpy())
         all_preds_pytorch.extend(preds.cpu().numpy().flatten())
         all_labels_pytorch.extend(labels.numpy())
 
-# %% [markdown] cell 53
-# ## Keras model loading
-#
-# To load the Keras based CNN-ViT hybrid model, you will
-#
-# - define **custom Keras layers** with serialization for model saving/loading for:
-#     - `position embedding`
-#     - `transformer block`
-#
-# This step is essential for reconstructing the ViT architecture in Keras.
-
-# %% [code] cell 54
 # Positional embedding that Keras can track
 @tf.keras.utils.register_keras_serializable(package="Custom")
 class AddPositionEmbedding(layers.Layer):
@@ -686,25 +425,13 @@ class TransformerBlock(layers.Layer):
         })
         return {**config}
 
-# %% [markdown] cell 55
-# ### --- Keras pre-trained ViT model loading ---
-#
-# Here, you will load the pre-trained Keras model using **`load_model`**, providing **custom objects** for deserialization of user-defined layers. This enables inference with the hybrid model.
-
-# %% [code] cell 56
 # ------------------- load CNN-ViT hybrid model ------------------
-keras_model = load_model(keras_model_name,
+keras_model = load_model(keras_model_path,
                          custom_objects={
                          "AddPositionEmbedding": AddPositionEmbedding,
                          "TransformerBlock":     TransformerBlock
                           })
 
-# %% [markdown] cell 57
-# ### Define dataloader
-#
-# In this cell, you create an ImageDataGenerator for rescaling and a generator for flowing images from directory, matching PyTorch setup for consistent evaluation.
-
-# %% [code] cell 58
 datagen = ImageDataGenerator(rescale=1./255)
 prediction_generator = datagen.flow_from_directory(
     dataset_path,
@@ -714,24 +441,11 @@ prediction_generator = datagen.flow_from_directory(
     shuffle=False
 )
 
-# %% [markdown] cell 59
-# ### Collecting metrics for Keras-based CNN-ViT hybrid model
-# Now, run the inference of the Keras-based CNN-ViT hybrid model and collect the evaluation metrics.
-
-# %% [code] cell 60
-# Notebook-only command: %%time
 
 all_probs_keras = keras_model.predict(prediction_generator, verbose=1)
 all_preds_keras = np.argmax(all_probs_keras, axis=1)
 all_labels_keras = prediction_generator.classes
 
-# %% [markdown] cell 61
-# ## Import the evaluation metrics
-#
-# Here you define the functions to compute and print classification metrics including accuracy, precision, recall, F1 score, ROC-AUC, confusion matrix, and log loss. These functions support both Keras and PyTorch model outputs.
-
-# %% [code] cell 62
-# Notebook-only command: %%time
 from sklearn.metrics import (accuracy_score,
                              precision_score,
                              recall_score,
@@ -747,17 +461,18 @@ from sklearn.preprocessing import label_binarize
 
 # define a function to get the metrics comprehensively
 def model_metrics(y_true, y_pred, y_prob, class_labels):
-    y_prob = np.array(y_prob)
-    if len(y_prob.shape)<2:
-        roc_score = roc_auc_score(y_true, y_prob)
-    elif len(y_prob.shape)==2:
-        roc_score = roc_auc_score(y_true, y_prob[:,1])
+    y_prob = np.asarray(y_prob, dtype=float)
+    if y_prob.ndim == 2 and y_prob.shape[1] == 1:
+        y_prob_for_binary = y_prob.ravel()
+    elif y_prob.ndim == 2 and y_prob.shape[1] > 1:
+        y_prob_for_binary = y_prob[:, 1]
     else:
-        roc_score = np.nan
+        y_prob_for_binary = y_prob.ravel()
+    roc_score = roc_auc_score(y_true, y_prob_for_binary)
     metrics = {'Accuracy': accuracy_score(y_true, y_pred),
                'Precision': precision_score(y_true, y_pred),
                'Recall': recall_score(y_true, y_pred),
-               'Loss': log_loss(y_true, y_prob),
+               'Loss': log_loss(y_true, y_prob_for_binary),
                'F1 Score': f1_score(y_true, y_pred),
                'ROC-AUC': roc_score,
                'Confusion Matrix': confusion_matrix(y_true, y_pred),
@@ -769,13 +484,13 @@ def model_metrics(y_true, y_pred, y_prob, class_labels):
 #function to print the metrics
 def print_metrics(y_true, y_pred, y_prob, class_labels, model_name):
     metrics = model_metrics(y_true, y_pred, y_prob, class_labels)
-    
+
     print(f"Evaluation metrics for the \033[1m{model_name}\033[0m")
-    print(f"Accuracy: {'':<1}{metrics["Accuracy"]:.4f}")
-    if metrics["ROC-AUC"] != np.nan:
-        print(f"ROC-AUC: {'':<2}{metrics["ROC-AUC"]:.4f}")
-    print(f"Loss: {'':<5}{metrics["Loss"]:.4f}\n")
-    print(f"Classification report:\n\n  {metrics["Classification Report"]}")
+    print(f"Accuracy: {'':<1}{metrics['Accuracy']:.4f}")
+    if not np.isnan(metrics['ROC-AUC']):
+        print(f"ROC-AUC: {'':<2}{metrics['ROC-AUC']:.4f}")
+    print(f"Loss: {'':<5}{metrics['Loss']:.4f}\n")
+    print(f"Classification report:\n\n  {metrics['Classification Report']}")
     print("========= Confusion Matrix =========")
     disp = ConfusionMatrixDisplay(confusion_matrix=metrics["Confusion Matrix"],
                                   display_labels=metrics["Class labels"])
@@ -783,13 +498,6 @@ def print_metrics(y_true, y_pred, y_prob, class_labels, model_name):
     disp.plot()
     plt.show()
 
-# %% [markdown] cell 63
-# ## Keras metrics reporting
-
-# %% [markdown] cell 64
-# ## Task 3: Print the evaluation metrics using `print_metrics` function for the **Keras** ViT model with name `Keras CNN-Vit Hybrid Model`
-
-# %% [code] cell 65
 print_metrics(y_true = all_labels_keras,
               y_pred = all_preds_keras,
               y_prob = all_probs_keras,
@@ -797,24 +505,6 @@ print_metrics(y_true = all_labels_keras,
               model_name = "Keras CNN-Vit Hybrid Model"
              )
 
-# %% [markdown] cell 66
-# Double-click **here** for the solution.
-# <!--
-# print_metrics(y_true = all_labels_keras,
-#               y_pred = all_preds_keras,
-#               y_prob = all_probs_keras,
-#               class_labels = agri_class_labels,
-#               model_name = "Keras CNN-Vit Hybrid Model"
-#              )
-# -->
-
-# %% [markdown] cell 67
-# ## PyTorch metrics reporting
-
-# %% [markdown] cell 68
-# ## Task 4: Print the evaluation metrics using `print_metrics` function for the **PyTorch** ViT model with model name `PyTorch CNN-Vit Hybrid Model`
-
-# %% [code] cell 69
 print_metrics(y_true = all_labels_pytorch,
               y_pred = all_preds_pytorch,
               y_prob = np.array(all_probs_pytorch),
@@ -822,25 +512,6 @@ print_metrics(y_true = all_labels_pytorch,
               model_name = "PyTorch CNN-Vit Hybrid Model"
              )
 
-# %% [markdown] cell 70
-# Double-click **here** for the solution.
-# <!--
-# print_metrics(y_true = all_labels_pytorch,
-#               y_pred = all_preds_pytorch,
-#               y_prob = np.array(all_probs_pytorch),
-#               class_labels = agri_class_labels,
-#               model_name = "PyTorch CNN-Vit Hybrid Model"
-#              )
-# -->
-
-# %% [markdown] cell 71
-# ## ROC curve plotting
-#
-# First, define a function to plot ROC curves for binary or multi-class classification using scikit-learn's `roc_curve` and `roc_auc_score`. It handles both single-class and multi-class cases by binarizing labels if needed.
-#
-# Next, plot the ROC curves for both the models.
-
-# %% [code] cell 72
 
 def plot_roc(y_true, y_prob, model_name):
     n_classes = y_prob.shape[1] if y_prob.ndim > 1 else 1
@@ -859,29 +530,16 @@ def plot_roc(y_true, y_prob, model_name):
     plt.title('ROC Curve')
     plt.legend()
 
-# %% [markdown] cell 73
-# ### ROC curve plotting for both models
-#
-# Plot the ROC curves for both Keras and PyTorch models on the same figure for visual performance comparison.
-
-# %% [code] cell 74
 plot_roc(np.array(all_labels_keras), np.array(all_probs_keras[:, 1]), "Keras Model")
 plt.show()
 plot_roc(np.array(all_labels_pytorch), np.array(all_probs_pytorch), "PyTorch Model")
 plt.show()
 
-# %% [markdown] cell 75
-# ## Comparing model performance
-#
-# Now compare the performance of different models to understand which model would be the best performer for your land classification task.
-# Computed metrics for both models are used to generate a comparison table for key scores. This facilitates quick performance assessment between frameworks.
-
-# %% [code] cell 76
 # get the Keras model performance metrics
 metrics_keras = model_metrics(all_labels_keras, all_preds_keras, all_probs_keras, agri_class_labels)
 
 # get the PyTorch model performance metrics
-metrics_pytorch = model_metrics(all_labels_pytorch, all_preds_pytorch, all_probs_pytorch, agri_class_labels)
+metrics_pytorch = model_metrics(all_labels_pytorch, all_preds_pytorch, np.array(all_probs_pytorch), agri_class_labels)
 
 
 # Display the comparison of metrics
@@ -895,61 +553,3 @@ for k in metrics_list:
     print("{:<18} | {:<15.4f} {:<15.4f}".format('\033[1m'+k+'\033[0m',
                                               metrics_keras[k],
                                               metrics_pytorch[k]))
-
-# %% [markdown] cell 77
-# ## Summary and discussion
-#
-# This notebook showcased a framework-agnostic workflow for importing, testing, and evaluating Vision Transformer models built in both Keras and PyTorch. By running the same input through each model, we examined the compatibility of results and gained practical experience handling architectural and data format variations.
-#
-# Key insights include the criticality of input format alignment, the subtle differences in model serialization/loading, and the framework-induced variations in prediction outputs. For a more robust evaluation, repeat this process with a labeled validation dataset, compute further metrics (precision, recall, F1-score), and systematically analyze speed and resource usage.
-#
-
-# %% [markdown] cell 78
-# ## Save and download the notebook for **final project** submission and evaluation
-#
-# You will need to save and download the completed notebook for final project submission and evaluation. 
-# <br>For saving and downloading the completed notebook, please follow the steps given below:</br>
-#
-# <font size = 4>  
-#
-# 1) **Complete** all the tasks and questions given in the notebook.
-#
-# <img src="https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/nv4jHlPU5_R1q7ZJrZ69eg/DL0321EN-M1L1-Save-IPYNB-Screenshot-1.png" style="width:600px; border:0px solid black;">
-#
-# 2) **Save** the notebook.</style>
-# <img src="https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/9-WPWD4mW1d-RV5Il5otTg/DL0321EN-M1L1-Save-IPYNB-Screenshot-2.png" style="width:600px; border:0px solid black;">
-#
-# 3) Identify and right click on the **correct notebook file** in the left pane.</style>
-# <img src="https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/RUSRPw7NT6Sof94B7-9naQ/DL0321EN-M1L1-Save-IPYNB-Screenshot-3.png" style="width:600px; border:0px solid black;">
-#
-# 4) Click on **Download**.</style>
-# <img src="https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/HHry4GT-vhLEcRi1T_LHGg/DL0321EN-M1L1-Save-IPYNB-Screenshot-4.png" style="width:600px; border:0px solid black;">
-#
-# 5) Download and **Save** the Jupyter notebook file on your computer **for final submission**.</style>
-# <img src="https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/hhsJbxc6R-T8_pXQGjMjvg/DL0321EN-M1L1-Save-IPYNB-Screenshot-5.png" style="width:600px; border:0px solid black;">
-#   </font>
-
-# %% [markdown] cell 79
-# ## Conclusion
-# Congratulations! You have successfully completed this lab and now you have a good understanding about loading custom pre-trained models, for both Keras and PyTorch frameworks. Using these pre-trained models, you can now evaluate their performance and also infer unknown datasets.
-# I hope you have learnt to apply the key concepts of Keras/Pytorch based classifiers, both traditional CNNs and more advanced and state-of-the-art, CNN-ViT hybrid models. Using this knowledge, now you should be able to tackle a variety of real world image classification problems. Good luck!
-
-# %% [markdown] cell 80
-# <h2>Author</h2>
-#
-# [Aman Aggarwal](https://www.linkedin.com/in/aggarwal-aman)
-#
-# Aman Aggarwal is a PhD working at the intersection of neuroscience, AI, and drug discovery. He specializes in quantitative microscopy and image processing.
-
-# %% [markdown] cell 81
-# <!--
-# ## Change Log
-#
-# |  Date (YYYY-MM-DD) |  Version | Changed By  |  Change Description |
-# |---|---|---|---|
-# | 2025-07-28  | 1.0  | Aman  |  Created the lab |
-#
-# -->
-
-# %% [markdown] cell 82
-# © Copyright IBM Corporation. All rights reserved.

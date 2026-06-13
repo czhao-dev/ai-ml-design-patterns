@@ -9,13 +9,13 @@ The dataset contains 6,000 JPG tiles, split evenly between the two classes.
 
 ## Source
 
-The notebooks download the archive from IBM Skills Network cloud storage:
+The data pipeline downloads the archive from IBM Skills Network cloud storage:
 
 ```text
 https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/4Z1fwRR295-1O3PMQBH6Dg/images-dataSAT.tar
 ```
 
-One earlier data-loading notebook references this alternate copy:
+One earlier data-loading workflow references this alternate copy:
 
 ```text
 https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/5vTzHBmQUaRNJQe5szCyKw/images-dataSAT.tar
