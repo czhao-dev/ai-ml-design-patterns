@@ -1,0 +1,8 @@
+torch
+numpy
+tqdm
+pyyaml
+tokenizers
+matplotlib
+huggingface_hub
+pytest

@@ -1,0 +1,28 @@
+model:
+  vocab_size: 4096
+  context_length: 512
+  n_layers: 6
+  n_heads: 6
+  hidden_size: 384
+  dropout: 0.1
+
+training:
+  batch_size: 32
+  max_steps: 20000
+  learning_rate: 0.0003
+  weight_decay: 0.1
+  warmup_steps: 1000
+  eval_interval: 500
+  eval_iters: 100
+  checkpoint_interval: 1000
+  grad_clip: 1.0
+  dtype: fp32
+  seed: 1337
+
+data:
+  train_path: data/processed/train.bin
+  valid_path: data/processed/valid.bin
+
+output:
+  checkpoint_dir: experiments/runs/small/checkpoints
+  log_dir: experiments/runs/small/logs
