@@ -1,0 +1,32 @@
+# MovieLens track (ml-latest-small): the track that demonstrates genuine
+# personalized recommendation -- the IMDb track has no user data and can
+# only ever predict a movie's aggregate rating, never recommend to a person.
+#
+# Download the dataset first: python scripts/download_movielens.py
+task: edge_regression
+seed: 1337
+
+data:
+  track: movielens
+  data_dir: data/movielens/ml-latest-small
+  split_strategy: leave_one_out
+  min_ratings_per_user: 5
+
+model:
+  hidden_dim: 32
+  num_layers: 2
+  dropout: 0.1
+  conv_type: sage
+
+training:
+  epochs: 300
+  lr: 0.005
+  weight_decay: 0.0001
+  device: null
+
+eval:
+  k_values: [5, 10, 20]
+  relevance_threshold: 4.0
+
+output:
+  run_dir: experiments/runs/movielens_small

@@ -1,0 +1,32 @@
+# IMDb track, sample-scale (data/sample, ~20 actors / 53 movies / 7 labeled).
+#
+# This config exists to verify the pipeline runs end-to-end, NOT to produce a
+# meaningful accuracy benchmark -- 7 labeled movies is far too few for a fixed
+# holdout split, so split_strategy is "loo" (leave-one-out CV across all 7).
+# A strong-looking LOO RMSE here only proves the GNN trains correctly; it does
+# not show the architecture works at scale (it can memorize 7 points as
+# easily as the existing LinearRegression baseline overfits them on this
+# sample -- see the README's Results section for the equivalent caveat the
+# original heuristics already carry).
+task: node_regression
+seed: 1337
+
+data:
+  track: imdb
+  export_dir: results/gnn_export
+  split_strategy: loo
+
+model:
+  hidden_dim: 16
+  num_layers: 2
+  dropout: 0.1
+  conv_type: sage
+
+training:
+  epochs: 200
+  lr: 0.01
+  weight_decay: 0.0001
+  device: null  # null = auto-detect (cuda > mps > cpu)
+
+output:
+  run_dir: experiments/runs/imdb_sample

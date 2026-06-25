@@ -1,0 +1,36 @@
+# IMDb track, full-scale -- DOCUMENTED, NOT RUNNABLE IN THIS REPO.
+#
+# The full IMDb filmography dataset (~244K actors, ~254K movies, ~60M edges
+# per relation -- see the main README's Methodology section) is not included
+# here, same as today's igraph-only pipeline. This config exists to show the
+# architecture is configurable for that scale (deeper/wider encoder, holdout
+# split instead of LOO-CV), not because it has been run or benchmarked here.
+#
+# At that scale, full-graph training as implemented in gnn/training.py would
+# almost certainly need to be replaced with mini-batch neighbor sampling
+# (e.g. torch_geometric.loader.NeighborLoader) -- flagged as a known follow-up,
+# not designed in detail in this repo.
+task: node_regression
+seed: 1337
+
+data:
+  track: imdb
+  export_dir: results_full/gnn_export
+  split_strategy: holdout
+  train_frac: 0.7
+  val_frac: 0.15
+
+model:
+  hidden_dim: 64
+  num_layers: 3
+  dropout: 0.2
+  conv_type: gat
+
+training:
+  epochs: 100
+  lr: 0.005
+  weight_decay: 0.0001
+  device: null
+
+output:
+  run_dir: experiments/runs/imdb_full

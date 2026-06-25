@@ -12,6 +12,7 @@ A monorepo of independent, end-to-end machine learning projects, each in its own
 | [ml-satellite-image-classifier](ml-satellite-image-classifier/) | Binary classification of satellite image tiles as agricultural or non-agricultural land, implemented end-to-end in both Keras/TensorFlow and PyTorch, progressing from CNN baselines to CNN–Vision Transformer hybrids. |
 | [ml-boston-climate-modeler](ml-boston-climate-modeler/) | Forecasts Boston-area (Reading, MA) daily precipitation, snowfall, and temperature from historical NOAA station data with a dependency-free, reproducible Python pipeline. |
 | [tiny-llm-gpt](tiny-llm-gpt/) | An educational, from-scratch implementation of a small GPT-style decoder-only Transformer, covering tokenizer training, dataset preprocessing, training/checkpointing, and text generation. |
+| [ml-movie-recommender](ml-movie-recommender/) | Builds actor/movie graphs from IMDb filmography data (PageRank, Jaccard similarity, community detection) as engineered features for a heterogeneous GNN (PyTorch Geometric), benchmarked against the original heuristic baselines on movie-rating prediction and, on MovieLens, genuine personalized top-N recommendation. |
 
 Each subdirectory is self-contained: its own `pyproject.toml`/`requirements.txt`, `src`, and `tests`. See each project's README for setup and usage instructions.
 

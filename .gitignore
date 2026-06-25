@@ -13,3 +13,10 @@ ml-wearable-motion-classifier/features.csv
 ml-wearable-motion-classifier/*_features.csv
 ml-wearable-motion-classifier/synthetic_data/
 ml-wearable-motion-classifier/data/
+
+# ml-movie-recommender-specific
+ml-movie-recommender/.venv-gnn/
+ml-movie-recommender/results/
+ml-movie-recommender/results_full/
+ml-movie-recommender/data/movielens/
+ml-movie-recommender/experiments/

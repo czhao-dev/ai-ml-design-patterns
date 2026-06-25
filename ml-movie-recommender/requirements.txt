@@ -1,0 +1,25 @@
+# Graph feature-engineering stage (run_all.sh, src/python/*.py)
+python-igraph>=0.11
+scikit-learn>=1.3
+numpy>=1.26
+
+# GNN stage (gnn/, scripts/train.py, scripts/evaluate.py) -- install into a
+# SEPARATE virtual environment pinned to Python 3.11-3.13; PyTorch wheels lag
+# new CPython releases, so a very new interpreter (e.g. the igraph stage's
+# own venv) may not have a torch wheel available yet. See README "Getting
+# Started" for the two-venv setup.
+#
+# torch-geometric is installed without its optional compiled extensions
+# (torch-scatter, torch-sparse, pyg-lib) -- HeteroConv + SAGEConv/GraphConv/
+# GATConv don't require them. If you add a layer type that does and hit an
+# ImportError naming one of those packages, see PyG's install matrix:
+# https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
+torch>=2.3.0
+torch-geometric>=2.5.0
+pandas>=2.0
+pyyaml>=6.0
+tqdm>=4.66
+requests>=2.31
+
+# Dev/test
+pytest>=7.4
