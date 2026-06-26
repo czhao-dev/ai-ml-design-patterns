@@ -16,6 +16,7 @@ A monorepo of independent, end-to-end machine learning projects, each in its own
 | [ml-gcp-vertex-rag-chatbot](ml-gcp-vertex-rag-chatbot/) | A retrieval-augmented generation document Q&A app that lets users upload a PDF, TXT, Markdown, CSV, or DOCX file and ask questions answered from its content, built with LangChain, Google Vertex AI (Gemini, `text-embedding-004`), and Chroma, served through Gradio and deployable to Cloud Run. |
 | [ml-social-network-predictor](ml-social-network-predictor/) | Analyzes Facebook/Google+ social graphs with `igraph` (community detection, ego networks, embeddedness/dispersion) and extends the analysis into a link-prediction task, comparing hand-engineered graph heuristics against DeepWalk-style PyTorch node embeddings using scikit-learn classifiers. |
 | [ml-recyclable-material-classifier-vgg16](ml-recyclable-material-classifier-vgg16/) | Classifies images as organic or recyclable material using VGG16 transfer learning, comparing a frozen feature-extraction head against fine-tuning the convolutional base, with results reported on a held-out test set. |
+| [ml-aircraft-defect-detection-vgg16](ml-aircraft-defect-detection-vgg16/) | Classifies aircraft surface damage as crack or dent using VGG16 transfer learning, comparing a frozen feature-extraction head against fine-tuning from `block5_conv3` onward, with results reported on a held-out test set. |
 
 Each subdirectory is self-contained: its own `pyproject.toml`/`requirements.txt`, `src`, and `tests`. See each project's README for setup and usage instructions.
 
