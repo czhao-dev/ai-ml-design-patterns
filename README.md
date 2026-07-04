@@ -11,7 +11,7 @@ A monorepo of ten end-to-end machine learning projects spanning computer vision,
 | [ml-satellite-image-classifier](#ml-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
 | [ml-model-compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
 | [ml-llm-alignment-fine-tuning](#ml-llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
-| [ml-tiny-llm-gpt](#ml-tiny-llm-gpt) | Language Modeling | PyTorch | GPT decoder-only Transformer built from scratch |
+| [ml-tiny-llm-gpt](#ml-tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
 | [ml-gcp-vertex-rag-chatbot](#ml-gcp-vertex-rag-chatbot) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
 | [ml-movie-recommender](#ml-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN over IMDb graphs; top-N recommendation on MovieLens |
 | [ml-social-network-predictor](#ml-social-network-predictor) | Graph ML | igraph, PyTorch | DeepWalk embeddings reach 0.986 ROC-AUC on 4,039-node Facebook graph |
@@ -69,9 +69,11 @@ A from-scratch GPT-style language model covering the complete pipeline from raw 
 
 - **Architecture:** Decoder-only Transformer with configurable depth, heads, and embedding dimension; causal self-attention, learned positional embeddings, and layer normalization — no HuggingFace model code in the loop.
 - **Pipeline:** Custom BPE tokenizer training → dataset preprocessing and sequence packing → training loop with gradient clipping and validation checkpointing → top-k / top-p text generation → perplexity evaluation → throughput and memory benchmarking.
+- **Model scaling experiment:** Tiny (~4.3M), Small (~15M), and Medium (~30M) variants all trained for the full 20,000 steps on the same TinyStories tokenizer/dataset — validation perplexity improves monotonically (7.11 → 5.36 → 5.09) with capacity.
+- **Cloud training:** Small/Medium's full-scale runs were provisioned on a rented AWS g4dn.xlarge (Tesla T4) rather than the author's laptop, cutting combined training time from an estimated ~34 hours (Apple M3) to under 10 hours for about $5.
 - Intentionally sized to run on consumer hardware while demonstrating every component of a modern LLM training stack.
 
-**Stack:** Python · PyTorch
+**Stack:** Python · PyTorch · AWS EC2
 
 ---
 

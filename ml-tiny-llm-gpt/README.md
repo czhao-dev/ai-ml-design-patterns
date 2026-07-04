@@ -19,6 +19,30 @@ The main goals of this project are to:
 
 This is not intended to compete with production LLMs. Instead, it is a hands-on systems and machine learning project for understanding how small language models work end to end.
 
+## Contents
+
+* [Features](#features)
+* [High-Level Architecture](#high-level-architecture)
+* [Repository Structure](#repository-structure)
+* [Model Variants](#model-variants)
+* [Installation](#installation)
+* [Dataset](#dataset)
+* [Training a Tokenizer](#training-a-tokenizer)
+* [Preparing the Dataset](#preparing-the-dataset)
+* [Training](#training)
+* [Text Generation](#text-generation)
+* [Evaluation](#evaluation)
+* [Benchmarking](#benchmarking)
+* [Experiments](#experiments)
+* [Example Training Curve](#example-training-curve)
+* [Implementation Notes](#implementation-notes)
+* [Skills Demonstrated](#skills-demonstrated)
+* [Roadmap](#roadmap)
+* [Future Work](#future-work)
+* [Limitations](#limitations)
+* [License](#license)
+* [Acknowledgments](#acknowledgments)
+
 ## Features
 
 * Custom GPT-style Transformer implementation
@@ -82,7 +106,7 @@ Next-token Logits
 ## Repository Structure
 
 ```text
-tinyllm-lab/
+ml-tiny-llm-gpt/
 ├── README.md
 ├── requirements.txt
 ├── configs/
@@ -132,7 +156,7 @@ The project supports multiple model sizes for experimentation.
 
 All three variants share a vocabulary size of 4096 (see [Training a Tokenizer](#training-a-tokenizer)), so the Tiny model's parameter count is a bit below the commonly-cited "~5M" estimate that assumes a larger vocabulary.
 
-These configurations are intentionally modest so that they can be trained and tested on a local machine.
+These configurations are intentionally modest: all three have been trained for the full 20,000 steps used throughout this README (see [Evaluation](#evaluation) and [Example Training Curve](#example-training-curve) for results). Tiny trains comfortably on a laptop CPU or Apple Silicon GPU in a few hours; Small and Medium are still small enough to experiment with locally at reduced step counts, but a full 20,000-step run benefits from a discrete GPU — the Small/Medium results in this README were trained on a rented cloud GPU rather than the author's laptop (see the note under [Benchmarking](#benchmarking)).
 
 ## Installation
 
@@ -166,6 +190,7 @@ pyyaml
 tokenizers
 matplotlib
 huggingface_hub
+pytest
 ```
 
 ## Dataset
@@ -220,18 +245,20 @@ python scripts/prepare_dataset.py \
   --output data/processed/
 ```
 
-This creates tokenized binary or tensor files that can be efficiently loaded during training.
+This writes flat `uint16` token-ID arrays to `train.bin` and `valid.bin`, which the training loop memory-maps for efficient random-access batching without loading the full dataset into RAM.
 
 ## Training
 
-Train the tiny model:
+Train the Tiny model:
 
 ```bash
 python scripts/train.py \
   --config configs/tiny.yaml
 ```
 
-Example configuration:
+Swap in `configs/small.yaml` or `configs/medium.yaml` to train one of the larger variants instead (see [Model Variants](#model-variants)); all three configs share the same schema and write checkpoints/logs to their own subdirectory under `experiments/runs/`.
+
+Example configuration (`configs/tiny.yaml`):
 
 ```yaml
 model:
@@ -299,12 +326,15 @@ python scripts/evaluate.py \
   --valid data/processed/valid.bin
 ```
 
-Example output (Tiny model, TinyStories subset, 20,000 steps):
+Example output (TinyStories subset, 20,000 steps):
 
-```text
-Validation loss: 1.96
-Perplexity: 7.11
-```
+| Model  | Validation Loss | Perplexity |
+| ------ | ---------------: | ----------: |
+| Tiny   |             1.96 |       7.11 |
+| Small  |             1.68 |       5.36 |
+| Medium |             1.63 |       5.09 |
+
+Perplexity drops monotonically with model size on this dataset, as expected — Small and Medium were trained with the same tokenizer, dataset, step count, and optimizer schedule as Tiny (see [Model scaling](#experiments) below), so the comparison isolates the effect of capacity.
 
 ## Benchmarking
 
@@ -317,27 +347,31 @@ python scripts/benchmark.py \
   --context-length 256
 ```
 
-Example benchmark table (Tiny model, Apple M3, batch size 1, no CUDA available so "GPU" is MPS):
+Example benchmark table (Apple M3, batch size 1, no CUDA available so "GPU" is MPS; each model benchmarked at its own trained context length):
 
-| Device | Context Length | Inference Tok/s | Train Tok/s | Peak Memory (MB) |
-| ------ | --------------: | ---------------: | -----------: | ----------------: |
-| CPU    |             256 |            69205 |       21871 |              302.7 |
-| MPS    |             256 |            54378 |       43218 |               25.5 |
+| Model  | Device | Context Length | Inference Tok/s | Train Tok/s | Peak Memory (MB) |
+| ------ | ------ | --------------: | ---------------: | -----------: | ----------------: |
+| Tiny   | CPU    |             256 |            69205 |       21871 |              302.7 |
+| Tiny   | MPS    |             256 |            54378 |       43218 |               25.5 |
+| Small  | CPU    |             512 |            28931 |        9886 |              513.7 |
+| Small  | MPS    |             512 |            25350 |       16762 |               66.5 |
+| Medium | CPU    |             512 |            13838 |        4978 |              665.2 |
+| Medium | MPS    |             512 |            23776 |        8533 |              127.1 |
 
-At this small batch size, inference is actually *faster on CPU* than MPS — per-op dispatch overhead on the MPS backend dominates when there isn't enough work per kernel launch to amortize it. Training (forward+backward, which does more compute per step) is faster on MPS, and MPS peak memory is far lower than the CPU process's RSS figure. Larger batch sizes are expected to favor MPS more consistently for both inference and training.
+At this small batch size, inference is actually *faster on CPU* than MPS for Tiny and Small — per-op dispatch overhead on the MPS backend dominates when there isn't enough work per kernel launch to amortize it. Medium is large enough that MPS overtakes CPU on inference too. Training (forward+backward, which does more compute per step) favors MPS across all three sizes, and MPS peak memory is far lower than the CPU process's RSS figure. Larger batch sizes are expected to favor MPS more consistently across the board.
+
+This table measures single-sample (batch size 1) inference/training speed on local Apple Silicon, which is the right regime for interactive/low-latency use but not for bulk training throughput. The Small and Medium *training runs* behind the results in this README (20,000 steps each, batch size 32) were run on a rented AWS g4dn.xlarge (Tesla T4) instead of locally: at that batch size and step count, the two runs would have taken roughly 34 hours combined on the M3 versus about 2.9h (Small) + 6.9h (Medium) on the T4, for a total cloud cost of around $5.
 
 ## Experiments
 
-Planned experiments include:
-
-| Experiment           | Description                                                     |
-| -------------------- | --------------------------------------------------------------- |
-| Tokenizer comparison | Compare character-level tokenization and BPE tokenization       |
-| Model scaling        | Compare 5M, 15M, and 30M parameter models                       |
-| Context length       | Compare 128, 256, and 512 token context windows                 |
-| Sampling methods     | Compare greedy decoding, temperature sampling, top-k, and top-p |
-| Training duration    | Analyze validation loss as training steps increase              |
-| Inference speed      | Measure tokens/sec across different model sizes                 |
+| Experiment           | Description                                                      | Status  |
+| -------------------- | ----------------------------------------------------------------- | ------- |
+| Model scaling        | Compare Tiny, Small, and Medium parameter counts                  | Done — see [Evaluation](#evaluation) and [Example Training Curve](#example-training-curve) |
+| Inference speed      | Measure tokens/sec across different model sizes                   | Done — see [Benchmarking](#benchmarking) |
+| Tokenizer comparison | Compare character-level tokenization and BPE tokenization         | Planned |
+| Context length       | Compare 128, 256, and 512 token context windows                   | Planned |
+| Sampling methods     | Compare greedy decoding, temperature sampling, top-k, and top-p   | Planned |
+| Training duration    | Analyze validation loss as training steps increase                | Planned |
 
 ## Example Training Curve
 
@@ -348,13 +382,26 @@ python scripts/plot_loss.py \
   --log experiments/runs/tiny/logs/train_log.jsonl
 ```
 
-Example report (Tiny model, TinyStories subset, 20,000 steps):
+Example reports (TinyStories subset, 20,000 steps):
 
 ```text
+Tiny
 Final train loss: 1.99
 Final validation loss: 1.96
 Final perplexity: 7.10
 Best checkpoint: step 19999 (val_loss 1.96)
+
+Small
+Final train loss: 1.48
+Final validation loss: 1.68
+Final perplexity: 5.38
+Best checkpoint: step 19500 (val_loss 1.68)
+
+Medium
+Final train loss: 1.24
+Final validation loss: 1.62
+Final perplexity: 5.05
+Best checkpoint: step 19500 (val_loss 1.61)
 ```
 
 ## Implementation Notes
@@ -385,6 +432,7 @@ This project demonstrates practical experience with:
 * PyTorch model implementation
 * Training loop design
 * GPU/MPS/CPU device handling
+* Cloud GPU training (AWS EC2)
 * Checkpointing and reproducibility
 * Evaluation and perplexity measurement
 * Text generation algorithms
@@ -402,7 +450,7 @@ This project demonstrates practical experience with:
 * [x] Add perplexity evaluation
 * [x] Add benchmark script
 * [x] Add training loss plots
-* [ ] Add model scaling experiments (Small/Medium configs are stubbed but not yet trained)
+* [x] Add model scaling experiments (Small and Medium trained for 20,000 steps each on an AWS g4dn.xlarge)
 * [ ] Add quantization experiment
 * [ ] Add optional C++ inference prototype
 
