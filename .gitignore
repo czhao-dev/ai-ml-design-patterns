@@ -6,14 +6,6 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# ml-wearable-motion-classifier-specific
-ml-wearable-motion-classifier/*.joblib
-!ml-wearable-motion-classifier/wmft_model.joblib
-ml-wearable-motion-classifier/features.csv
-ml-wearable-motion-classifier/*_features.csv
-ml-wearable-motion-classifier/synthetic_data/
-ml-wearable-motion-classifier/data/
-
 # ml-movie-recommender-specific
 ml-movie-recommender/.venv-gnn/
 ml-movie-recommender/results/

@@ -1,9 +1,0 @@
-# Core dependencies
-python-igraph>=0.11
-matplotlib>=3.8
-
-# ML dependencies (link prediction + node embeddings)
-numpy>=1.26
-pandas>=2.1
-scikit-learn>=1.3
-torch>=2.2

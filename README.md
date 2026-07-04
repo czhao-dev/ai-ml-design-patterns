@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A monorepo of ten end-to-end machine learning projects spanning computer vision, large language models, graph learning, time-series forecasting, model compression, and production inference serving. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
+A monorepo of seven end-to-end machine learning projects spanning computer vision, large language models, graph learning, time-series forecasting, model compression, and production inference serving. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
 
 ## Projects at a Glance
 
@@ -14,9 +14,6 @@ A monorepo of ten end-to-end machine learning projects spanning computer vision,
 | [ml-tiny-llm-gpt](#ml-tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
 | [ml-gcp-vertex-rag-chatbot](#ml-gcp-vertex-rag-chatbot) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
 | [ml-movie-recommender](#ml-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN over IMDb graphs; top-N recommendation on MovieLens |
-| [ml-social-network-predictor](#ml-social-network-predictor) | Graph ML | igraph, PyTorch | DeepWalk embeddings reach 0.986 ROC-AUC on 4,039-node Facebook graph |
-| [ml-wearable-motion-classifier](#ml-wearable-motion-classifier) | Classical ML | scikit-learn, NumPy, SciPy | IMU → trajectory → ensemble classifier for clinical rehabilitation |
-| [ml-recyclable-material-classifier-vgg16](#ml-recyclable-material-classifier-vgg16) | Computer Vision | Keras/TF, VGG16 | Transfer learning; caught and fixed training-on-test bug from source notebook |
 | [ml-boston-climate-modeler](#ml-boston-climate-modeler) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
 
 ---
@@ -104,45 +101,6 @@ Graph feature engineering pipeline extended with a heterogeneous GNN, evaluated 
 
 ---
 
-### ml-social-network-predictor
-
-Structural analysis of large social graphs extended into a link-prediction task comparing hand-engineered heuristics against learned node embeddings.
-
-- **Graph analysis (igraph):** Degree distribution, ego-network extraction, Fast-Greedy / Edge-Betweenness / Infomap / Walktrap community detection, embeddedness and dispersion scoring on 4,039-node Facebook and Google+ graphs.
-- **Node embeddings:** Hand-rolled DeepWalk-style skip-gram model (PyTorch) trained on random walks from the training graph only — test edges withheld before any graph operation.
-- **Link prediction results** (full Facebook graph, 1,000 held-out test edges): heuristics-only **0.974 ROC-AUC**, embeddings-only **0.986 ROC-AUC**, combined 0.953 ROC-AUC (threshold sensitivity; see case study writeup).
-- Proper holdout methodology documented: test edges excluded before all graph analysis and embedding training to prevent leakage.
-
-**Stack:** Python · PyTorch · igraph · scikit-learn
-
----
-
-### ml-wearable-motion-classifier
-
-A signal-processing and ML pipeline classifying upper-body movements from wrist-worn IMU data in a clinical rehabilitation context (Wolf Motor Function Test).
-
-- **Preprocessing:** Sensor-frame alignment, gravity subtraction, zero-velocity updates (ZUPT), and wrist trajectory reconstruction from raw accelerometer/gyroscope/quaternion captures of a wrist-worn MPU-9150.
-- **Features:** Vertical power, azimuth rotation, peak counts, path length, variance, and acceleration statistics extracted from reconstructed trajectories.
-- **Models:** Deterministic rule-based baseline + four scikit-learn classifiers (SVM, random forest, histogram gradient boosting, soft-voting ensemble). Data augmentation pipeline with source-trial-aware grouped cross-validation to prevent leakage from augmented variants back into the test fold.
-- **Results:** ~74% accuracy (grouped CV, 15 of 17 classes, real + augmented data) — see README for an honest discussion of dataset limitations.
-- **Testing:** 6-module test suite covering the CLI, sensor parser, preprocessing, quaternion math, feature extraction, and the rule-based classifier. Not approved for clinical use.
-
-**Stack:** Python · scikit-learn · NumPy · SciPy · pandas
-
----
-
-### ml-recyclable-material-classifier-vgg16
-
-Binary classification of organic vs. recyclable material images using VGG16 transfer learning, with two configurations compared head-to-head.
-
-- **Configurations:** Frozen feature-extraction head vs. fine-tuning from `block5_conv3` onward; both trained on 800 images with augmentation, evaluated on a 200-image held-out test set.
-- **Results:** Both reach 86.5% test accuracy; fine-tuning improves ROC-AUC (0.9534 vs. 0.9332) and produces more balanced precision/recall across classes.
-- **Notable:** Caught and fixed a data-handling bug in the source notebook — a mislabeled generator meant every original training run was training on test-directory images, not training-directory images.
-
-**Stack:** Python · Keras/TensorFlow · VGG16
-
----
-
 ### ml-boston-climate-modeler
 
 Daily weather forecasting for Reading, MA (Boston suburb) from NOAA station data — two complete pipelines in one repo: a stdlib-only Ridge baseline and a pure-TensorFlow deep learning stack.
@@ -188,12 +146,10 @@ Papers and resources that directly informed the techniques used across these pro
 
 **Graph learning**
 - Fey, M., and Lenssen, J.E. "Fast Graph Representation Learning with PyTorch Geometric." *ICLR Workshop*, 2019. [arxiv.org/abs/1903.02428](https://arxiv.org/abs/1903.02428) *(ml-movie-recommender)*
-- Perozzi, B., Al-Rfou, R., and Skiena, S. "DeepWalk: Online Learning of Social Representations." *KDD*, 2014. [arxiv.org/abs/1403.6652](https://arxiv.org/abs/1403.6652) *(ml-social-network-predictor)*
-- Backstrom, L., and Kleinberg, J. "Romantic Partnerships and the Dispersion of Social Ties." *CSCW*, 2014. [arxiv.org/abs/1310.6753](https://arxiv.org/abs/1310.6753) *(ml-social-network-predictor)*
 
 **Transfer learning and convolutional networks**
-- Simonyan, K., and Zisserman, A. "Very Deep Convolutional Networks for Large-Scale Image Recognition." *ICLR*, 2015. [arxiv.org/abs/1409.1556](https://arxiv.org/abs/1409.1556) *(ml-recyclable-material-classifier-vgg16)*
-- Russakovsky, O., et al. "ImageNet Large Scale Visual Recognition Challenge." *IJCV*, 2015. [arxiv.org/abs/1409.0575](https://arxiv.org/abs/1409.0575) *(ml-satellite-image-classifier, ml-recyclable-material-classifier-vgg16)*
+- Simonyan, K., and Zisserman, A. "Very Deep Convolutional Networks for Large-Scale Image Recognition." *ICLR*, 2015. [arxiv.org/abs/1409.1556](https://arxiv.org/abs/1409.1556) *(ml-satellite-image-classifier)*
+- Russakovsky, O., et al. "ImageNet Large Scale Visual Recognition Challenge." *IJCV*, 2015. [arxiv.org/abs/1409.0575](https://arxiv.org/abs/1409.0575) *(ml-satellite-image-classifier)*
 
 **Model compression**
 - Han, S., Pool, J., Tran, J., and Dally, W.J. "Learning Both Weights and Connections for Efficient Neural Networks." *NeurIPS*, 2015. [arxiv.org/abs/1506.02626](https://arxiv.org/abs/1506.02626) *(ml-model-compression)*
@@ -201,13 +157,9 @@ Papers and resources that directly informed the techniques used across these pro
 - Jacob, B., et al. "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference." *CVPR*, 2018. [arxiv.org/abs/1712.05877](https://arxiv.org/abs/1712.05877) *(ml-model-compression)*
 - Hinton, G., Vinyals, O., and Dean, J. "Distilling the Knowledge in a Neural Network." *NeurIPS Workshop*, 2015. [arxiv.org/abs/1503.02531](https://arxiv.org/abs/1503.02531) *(ml-model-compression)*
 
-**Clinical assessment**
-- Wolf, S.L., et al. "Assessing Wolf Motor Function Test as Outcome Measure for Research in Patients After Stroke." *Stroke*, 32(7):1635–1639, 2001. [doi.org/10.1161/01.STR.32.7.1635](https://doi.org/10.1161/01.STR.32.7.1635) *(ml-wearable-motion-classifier)*
-
 **Datasets**
 - NOAA Global Historical Climatology Network Daily (GHCN-D). [ncei.noaa.gov](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily) *(ml-boston-climate-modeler)*
 - Harper, F.M., and Konstan, J.A. "The MovieLens Datasets: History and Context." *ACM TIIS*, 5(4):1–19, 2015. [doi.org/10.1145/2827872](https://doi.org/10.1145/2827872) *(ml-movie-recommender)*
-- Leskovec, J., and Mcauley, J. "Learning to Discover Social Circles in Ego Networks." *NeurIPS*, 2012. [snap.stanford.edu/data/ego-Facebook.html](https://snap.stanford.edu/data/ego-Facebook.html) *(ml-social-network-predictor)*
 
 ## License
 
