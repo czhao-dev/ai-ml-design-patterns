@@ -37,7 +37,6 @@ This is not intended to compete with production LLMs. Instead, it is a hands-on 
 * [Example Training Curve](#example-training-curve)
 * [Implementation Notes](#implementation-notes)
 * [Skills Demonstrated](#skills-demonstrated)
-* [Roadmap](#roadmap)
 * [Future Work](#future-work)
 * [Limitations](#limitations)
 * [License](#license)
@@ -360,7 +359,7 @@ Example benchmark table (Apple M3, batch size 1, no CUDA available so "GPU" is M
 
 At this small batch size, inference is actually *faster on CPU* than MPS for Tiny and Small — per-op dispatch overhead on the MPS backend dominates when there isn't enough work per kernel launch to amortize it. Medium is large enough that MPS overtakes CPU on inference too. Training (forward+backward, which does more compute per step) favors MPS across all three sizes, and MPS peak memory is far lower than the CPU process's RSS figure. Larger batch sizes are expected to favor MPS more consistently across the board.
 
-This table measures single-sample (batch size 1) inference/training speed on local Apple Silicon, which is the right regime for interactive/low-latency use but not for bulk training throughput. The Small and Medium *training runs* behind the results in this README (20,000 steps each, batch size 32) were run on a rented AWS g4dn.xlarge (Tesla T4) instead of locally: at that batch size and step count, the two runs would have taken roughly 34 hours combined on the M3 versus about 2.9h (Small) + 6.9h (Medium) on the T4, for a total cloud cost of around $5.
+This table measures single-sample (batch size 1) inference/training speed on local Apple Silicon, which is the right regime for interactive/low-latency use but not for bulk training throughput. The Small and Medium *training runs* behind the results in this README (20,000 steps each, batch size 32) were run on a rented AWS g4dn.xlarge (Tesla T4) instead of locally: at that batch size and step count, the two runs would have taken roughly 34 hours combined on the M3 versus about 2.9h (Small) + 6.9h (Medium) on the T4.
 
 ## Experiments
 
@@ -438,21 +437,6 @@ This project demonstrates practical experience with:
 * Text generation algorithms
 * Performance benchmarking
 * Clean project structure and documentation
-
-## Roadmap
-
-* [x] Implement tokenizer training
-* [x] Implement dataset preprocessing
-* [x] Implement GPT-style Transformer model
-* [x] Add training loop
-* [x] Add validation and checkpointing
-* [x] Add text generation
-* [x] Add perplexity evaluation
-* [x] Add benchmark script
-* [x] Add training loss plots
-* [x] Add model scaling experiments (Small and Medium trained for 20,000 steps each on an AWS g4dn.xlarge)
-* [ ] Add quantization experiment
-* [ ] Add optional C++ inference prototype
 
 ## Future Work
 
