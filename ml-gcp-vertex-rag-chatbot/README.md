@@ -15,6 +15,8 @@ This repository is a portfolio-ready reference implementation: a runnable docume
 
 ## Demo
 
+**Live demo:** https://rag-pdf-chatbot-715060982814.us-central1.run.app
+
 Run the app locally or deploy it to Cloud Run, upload a document, and ask a question about its contents.
 
 ```text
