@@ -47,11 +47,21 @@ def main():
         encoder, decoder = training.make_imdb_model(data, config["model"])
         label_indices = data["movie"].label_mask.nonzero(as_tuple=True)[0].tolist()
         print(f"IMDb track: {len(label_indices)} labeled movies, training on all of them "
-              f"(smoke test; see scripts/evaluate.py for the real LOO-CV metric).")
-        loss = training.train_imdb(
-            data, encoder, decoder, label_indices, epochs,
-            config["training"]["lr"], config["training"]["weight_decay"], device,
-        )
+              f"(smoke test; see scripts/evaluate.py for the real LOO-CV/holdout metric).")
+        nl_cfg = config["training"].get("neighbor_loader")
+        if nl_cfg:
+            print(f"Using mini-batch NeighborLoader training (batch_size={nl_cfg['batch_size']}, "
+                  f"num_neighbors={nl_cfg['num_neighbors']}).")
+            loss = training.train_imdb_minibatch(
+                data, encoder, decoder, label_indices, epochs,
+                config["training"]["lr"], config["training"]["weight_decay"], device,
+                batch_size=nl_cfg["batch_size"], num_neighbors=nl_cfg["num_neighbors"],
+            )
+        else:
+            loss = training.train_imdb(
+                data, encoder, decoder, label_indices, epochs,
+                config["training"]["lr"], config["training"]["weight_decay"], device,
+            )
         print(f"Final train MSE: {loss:.4f}")
     elif track == "movielens":
         data = build_movielens_hetero_data(

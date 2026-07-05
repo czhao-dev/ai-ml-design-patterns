@@ -6,9 +6,11 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# ml-movie-recommender-specific
-ml-movie-recommender/.venv-gnn/
-ml-movie-recommender/results/
-ml-movie-recommender/results_full/
-ml-movie-recommender/data/movielens/
-ml-movie-recommender/experiments/
+# gnn-movie-recommender-specific
+gnn-movie-recommender/.venv-gnn/
+gnn-movie-recommender/results/
+gnn-movie-recommender/results_full/
+gnn-movie-recommender/data/movielens/
+gnn-movie-recommender/data/full/
+gnn-movie-recommender/data/full_raw/
+gnn-movie-recommender/experiments/

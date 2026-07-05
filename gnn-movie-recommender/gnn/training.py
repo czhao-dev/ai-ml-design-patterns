@@ -1,14 +1,18 @@
 """Model construction + training loops shared by scripts/train.py and scripts/evaluate.py.
 
-Kept deliberately thin: build the encoder/decoder for a track, then run a
-plain full-batch training loop (both datasets here are small enough that
-full-batch training is the right call -- mini-batch neighbor sampling is a
-documented follow-up for the full IMDb scale, not implemented here, see
-configs/imdb_full.yaml).
+train_imdb/predict_imdb run plain full-batch training -- the right call for
+the IMDb sample and MovieLens ml-latest-small, both small enough to fit a
+forward/backward pass over the whole graph. train_imdb_minibatch/
+predict_imdb_minibatch use PyTorch Geometric's NeighborLoader instead, for
+the full-scale IMDb graph (configs/imdb_full.yaml), where full-batch
+HeteroConv over tens of millions of edges is not practical on a laptop CPU.
+Selected via the config's `training.neighbor_loader` block (batch_size,
+num_neighbors) -- see scripts/train.py / scripts/evaluate.py.
 """
 
 import torch
 import torch.nn.functional as F
+from torch_geometric.loader import NeighborLoader
 
 from gnn.models.hetero_gnn import EdgeRatingDecoder, HeteroGNNEncoder, RatingDecoder
 
@@ -80,6 +84,73 @@ def predict_imdb(data, encoder, decoder, movie_indices, device):
     pred = _imdb_forward(data, encoder, decoder, device)
     idx_t = torch.tensor(movie_indices, dtype=torch.long, device=device)
     return pred[idx_t].cpu()
+
+
+def _imdb_forward_batch(batch, encoder, decoder, device):
+    """Same as _imdb_forward, but for a NeighborLoader-sampled subgraph batch."""
+    x_dict = {"actor": batch["actor"].x.to(device), "movie": batch["movie"].x.to(device)}
+    edge_index_dict = {et: batch[et].edge_index.to(device) for et in batch.edge_types}
+    edge_weight_dict = {
+        et: batch[et].edge_weight.to(device) for et in batch.edge_types if "edge_weight" in batch[et]
+    }
+    h_dict = encoder(x_dict, edge_index_dict, edge_weight_dict)
+    return decoder(h_dict["movie"])
+
+
+def _make_imdb_neighbor_loader(data, node_indices, batch_size, num_neighbors, shuffle):
+    neighbor_spec = {et: num_neighbors for et in data.edge_types}
+    idx_t = torch.as_tensor(node_indices, dtype=torch.long)
+    return NeighborLoader(
+        data, num_neighbors=neighbor_spec, input_nodes=("movie", idx_t),
+        batch_size=batch_size, shuffle=shuffle,
+    )
+
+
+def train_imdb_minibatch(data, encoder, decoder, train_idx, epochs, lr, weight_decay, device,
+                         batch_size, num_neighbors):
+    """Mini-batch counterpart to train_imdb, for graphs too large to fit a
+    full-batch forward/backward pass (the full-scale IMDb track). Returns the
+    final epoch's mean per-batch training MSE."""
+    encoder.to(device)
+    decoder.to(device)
+    params = list(encoder.parameters()) + list(decoder.parameters())
+    optimizer = torch.optim.Adam(params, lr=lr, weight_decay=weight_decay)
+    loader = _make_imdb_neighbor_loader(data, train_idx, batch_size, num_neighbors, shuffle=True)
+
+    encoder.train()
+    decoder.train()
+    epoch_loss = None
+    for _ in range(epochs):
+        total_loss, n_batches = 0.0, 0
+        for batch in loader:
+            optimizer.zero_grad()
+            pred = _imdb_forward_batch(batch, encoder, decoder, device)
+            bs = batch["movie"].batch_size
+            target = batch["movie"].y[:bs].to(device)
+            loss = F.mse_loss(pred[:bs], target)
+            loss.backward()
+            optimizer.step()
+            total_loss += float(loss.detach())
+            n_batches += 1
+        epoch_loss = total_loss / max(n_batches, 1)
+    return epoch_loss
+
+
+@torch.no_grad()
+def predict_imdb_minibatch(data, encoder, decoder, movie_indices, device, batch_size, num_neighbors):
+    """Mini-batch counterpart to predict_imdb. Returns predictions in the same
+    order as movie_indices (NeighborLoader doesn't preserve input order)."""
+    encoder.eval()
+    decoder.eval()
+    loader = _make_imdb_neighbor_loader(data, movie_indices, batch_size, num_neighbors, shuffle=False)
+    pred_by_index = {}
+    for batch in loader:
+        pred = _imdb_forward_batch(batch, encoder, decoder, device)
+        bs = batch["movie"].batch_size
+        seed_ids = batch["movie"].n_id[:bs].tolist()
+        for i, orig_idx in enumerate(seed_ids):
+            pred_by_index[orig_idx] = float(pred[i])
+    return torch.tensor([pred_by_index[i] for i in movie_indices])
 
 
 def _movielens_forward(data, encoder, decoder, device, edge_label_index):

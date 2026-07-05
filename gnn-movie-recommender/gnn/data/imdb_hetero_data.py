@@ -31,6 +31,20 @@ def _read_csv(path):
         return list(csv.DictReader(f))
 
 
+def _read_edge_csv(path, n_cols):
+    """Lean reader for the (potentially multi-million-row) edge CSVs -- avoids
+    csv.DictReader's per-row dict allocation, which is the main memory/time
+    cost at full IMDb scale (tens of millions of edges)."""
+    columns = [[] for _ in range(n_cols)]
+    with open(path, newline="") as f:
+        reader = csv.reader(f)
+        next(reader, None)  # header
+        for row in reader:
+            for col, value in zip(columns, row):
+                col.append(value)
+    return columns
+
+
 def _zscore(values):
     t = torch.tensor(values, dtype=torch.float)
     std = t.std()
@@ -94,11 +108,11 @@ def build_imdb_hetero_data(export_dir):
     data["actor"].num_nodes = num_actors
 
     # ---- actor <-> actor (co-appearance; both directions already in the export) ----
-    aa_rows = _read_csv(export_dir / "edges_actor_actor.csv")
-    if aa_rows:
-        src = torch.tensor([int(r["src"]) for r in aa_rows])
-        dst = torch.tensor([int(r["dst"]) for r in aa_rows])
-        weight = torch.tensor([float(r["weight"]) for r in aa_rows])
+    aa_src, aa_dst, aa_weight = _read_edge_csv(export_dir / "edges_actor_actor.csv", 3)
+    if aa_src:
+        src = torch.tensor([int(v) for v in aa_src])
+        dst = torch.tensor([int(v) for v in aa_dst])
+        weight = torch.tensor([float(v) for v in aa_weight])
     else:
         src = dst = torch.empty(0, dtype=torch.long)
         weight = torch.empty(0)
@@ -106,11 +120,11 @@ def build_imdb_hetero_data(export_dir):
     data["actor", "co_appeared_with", "actor"].edge_weight = weight
 
     # ---- movie <-> movie (Jaccard similarity; export lists each pair once) ----
-    mm_rows = _read_csv(export_dir / "edges_movie_movie.csv")
-    if mm_rows:
-        src = torch.tensor([int(r["src"]) for r in mm_rows])
-        dst = torch.tensor([int(r["dst"]) for r in mm_rows])
-        weight = torch.tensor([float(r["weight"]) for r in mm_rows])
+    mm_src, mm_dst, mm_weight = _read_edge_csv(export_dir / "edges_movie_movie.csv", 3)
+    if mm_src:
+        src = torch.tensor([int(v) for v in mm_src])
+        dst = torch.tensor([int(v) for v in mm_dst])
+        weight = torch.tensor([float(v) for v in mm_weight])
         src2 = torch.cat([src, dst])
         dst2 = torch.cat([dst, src])
         weight2 = torch.cat([weight, weight])
@@ -121,9 +135,9 @@ def build_imdb_hetero_data(export_dir):
     data["movie", "similar_to", "movie"].edge_weight = weight2
 
     # ---- actor <-> movie bipartite cast structure ----
-    am_rows = _read_csv(export_dir / "edges_actor_movie.csv")
-    actor_idx = torch.tensor([int(r["actor_index"]) for r in am_rows])
-    movie_idx = torch.tensor([int(r["movie_index"]) for r in am_rows])
+    am_actor, am_movie = _read_edge_csv(export_dir / "edges_actor_movie.csv", 2)
+    actor_idx = torch.tensor([int(v) for v in am_actor])
+    movie_idx = torch.tensor([int(v) for v in am_movie])
     data["actor", "acted_in", "movie"].edge_index = torch.stack([actor_idx, movie_idx])
     data["movie", "performed_by", "actor"].edge_index = torch.stack([movie_idx, actor_idx])
 

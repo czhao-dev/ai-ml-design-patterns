@@ -50,46 +50,85 @@ def evaluate_imdb(config, device):
     data = build_imdb_hetero_data(config["data"]["export_dir"])
     label_indices = data["movie"].label_mask.nonzero(as_tuple=True)[0].tolist()
     demo_movies = data.demo_movies
-    demo_indices = {m["index"] for m in demo_movies}
+    demo_indices = [m["index"] for m in demo_movies]
 
     epochs = config["training"]["epochs"]
     lr, wd = config["training"]["lr"], config["training"]["weight_decay"]
+    nl_cfg = config["training"].get("neighbor_loader")
+    nl_kwargs = {"batch_size": nl_cfg["batch_size"], "num_neighbors": nl_cfg["num_neighbors"]} if nl_cfg else None
+    if nl_kwargs:
+        print(f"Using mini-batch NeighborLoader (batch_size={nl_kwargs['batch_size']}, "
+              f"num_neighbors={nl_kwargs['num_neighbors']}).")
+
+    def train_and_predict(train_idx, predict_idx, encoder, decoder):
+        if nl_kwargs:
+            training.train_imdb_minibatch(data, encoder, decoder, train_idx, epochs, lr, wd, device, **nl_kwargs)
+            return training.predict_imdb_minibatch(data, encoder, decoder, predict_idx, device, **nl_kwargs)
+        training.train_imdb(data, encoder, decoder, train_idx, epochs, lr, wd, device)
+        return training.predict_imdb(data, encoder, decoder, predict_idx, device)
 
     predictions_by_movie = {}
-    if config["data"]["split_strategy"] == "loo":
+    demo_in_sample = set()
+    global_mean_metrics = None
+    split_strategy = config["data"]["split_strategy"]
+    if split_strategy == "loo":
         print(f"Running leave-one-out CV across {len(label_indices)} labeled movies...")
         for train_idx, test_idx in leave_one_out_label_splits(label_indices):
             encoder, decoder = training.make_imdb_model(data, config["model"])
-            training.train_imdb(data, encoder, decoder, train_idx, epochs, lr, wd, device)
-            pred = training.predict_imdb(data, encoder, decoder, test_idx, device)
+            pred = train_and_predict(train_idx, test_idx, encoder, decoder)
             predictions_by_movie[test_idx[0]] = float(pred[0])
-    elif config["data"]["split_strategy"] == "holdout":
+        predictions_for_table = predictions_by_movie
+    elif split_strategy == "holdout":
         train_idx, val_idx, test_idx = holdout_label_split(
             label_indices, config["data"]["train_frac"], config["data"]["val_frac"], config.get("seed", 0),
         )
         encoder, decoder = training.make_imdb_model(data, config["model"])
-        training.train_imdb(data, encoder, decoder, train_idx, epochs, lr, wd, device)
-        preds = training.predict_imdb(data, encoder, decoder, test_idx, device)
+        preds = train_and_predict(train_idx, test_idx, encoder, decoder)
         predictions_by_movie = dict(zip(test_idx, preds.tolist()))
+
+        # Demo movies aren't guaranteed to land in the test split at this scale
+        # (unlike the sample's LOO, which covers every labeled movie) -- predict
+        # them too for the results table, flagging any that ended up in-sample.
+        demo_in_sample = {idx for idx in demo_indices if idx in set(train_idx)}
+        demo_to_predict = [idx for idx in demo_indices if idx not in predictions_by_movie]
+        predictions_for_table = dict(predictions_by_movie)
+        if demo_to_predict:
+            if nl_kwargs:
+                demo_preds = training.predict_imdb_minibatch(data, encoder, decoder, demo_to_predict, device, **nl_kwargs)
+            else:
+                demo_preds = training.predict_imdb(data, encoder, decoder, demo_to_predict, device)
+            predictions_for_table.update(zip(demo_to_predict, demo_preds.tolist()))
+
+        # A trivial baseline (predict the train-label mean for every test movie)
+        # is the minimum bar a full-scale GNN needs to clear -- at this scale,
+        # unlike the 7-movie sample, there's enough data for this comparison to
+        # be meaningful rather than noise.
+        train_mean = float(data["movie"].y[train_idx].mean())
+        test_actual = [float(data["movie"].y[i]) for i in test_idx]
+        global_mean_pred = [train_mean] * len(test_idx)
+        global_mean_metrics = (rmse(global_mean_pred, test_actual), mae(global_mean_pred, test_actual))
     else:
-        raise ValueError(f"Unknown split_strategy: {config['data']['split_strategy']}")
+        raise ValueError(f"Unknown split_strategy: {split_strategy}")
 
     actual = data["movie"].y
     preds_list = [predictions_by_movie[i] for i in sorted(predictions_by_movie)]
     actual_list = [float(actual[i]) for i in sorted(predictions_by_movie)]
     gnn_rmse, gnn_mae = rmse(preds_list, actual_list), mae(preds_list, actual_list)
-    print(f"GNN ({config['data']['split_strategy']}) RMSE={gnn_rmse:.4f} MAE={gnn_mae:.4f} "
+    print(f"GNN ({split_strategy}) RMSE={gnn_rmse:.4f} MAE={gnn_mae:.4f} "
           f"over {len(preds_list)} labeled movies.")
 
     results_dir = Path(config["data"]["export_dir"]).parent
     baselines = load_all_baselines(results_dir)
-    write_imdb_report(demo_movies, predictions_by_movie, actual, baselines, gnn_rmse, gnn_mae, len(preds_list))
+    write_imdb_report(demo_movies, predictions_for_table, actual, baselines, gnn_rmse, gnn_mae, len(preds_list),
+                       split_strategy, demo_in_sample, global_mean_metrics)
 
 
-def write_imdb_report(demo_movies, predictions_by_movie, actual, baselines, gnn_rmse, gnn_mae, n_eval):
+def write_imdb_report(demo_movies, predictions_by_movie, actual, baselines, gnn_rmse, gnn_mae, n_eval,
+                       split_strategy="loo", demo_in_sample=frozenset(), global_mean_metrics=None):
     REPORTS_DIR.mkdir(exist_ok=True)
     path = REPORTS_DIR / "results_summary.md"
-    lines = ["# Results Summary\n", "\n## IMDb track (rating prediction, sample data)\n"]
+    data_label = "sample data" if split_strategy == "loo" else f"full IMDb data, {n_eval:,} labeled movies"
+    lines = ["# Results Summary\n", f"\n## IMDb track (rating prediction, {data_label})\n"]
     lines.append(
         "\n| Method | " + " | ".join(m["name"].split(" (")[0] for m in demo_movies) + " |\n"
     )
@@ -105,27 +144,64 @@ def write_imdb_report(demo_movies, predictions_by_movie, actual, baselines, gnn_
         values = [baselines[name_lookup[m["index"]]][key] for m in demo_movies]
         lines.append(row(label, values))
     gnn_values = [predictions_by_movie.get(m["index"]) for m in demo_movies]
-    lines.append(row("GNN (heterogeneous, LOO)", gnn_values))
+    has_in_sample_demo = any(m["index"] in demo_in_sample for m in demo_movies)
+    gnn_label = f"GNN (heterogeneous, {split_strategy.upper()})" + (" [*]" if has_in_sample_demo else "")
+    lines.append(row(gnn_label, gnn_values))
     actual_values = [float(actual[m["index"]]) for m in demo_movies]
-    lines.append(row("**IMDb (sample data)**", actual_values))
+    lines.append(row(f"**IMDb ({data_label})**", actual_values))
+    if has_in_sample_demo:
+        in_sample_names = [m["name"] for m in demo_movies if m["index"] in demo_in_sample]
+        lines.append(
+            f"\n[*] {', '.join(in_sample_names)}: in-sample prediction(s) -- this movie landed in the "
+            "training split (holdout is a random split, so this can happen by chance), not held out, "
+            "so its GNN value above is not comparable to the others.\n"
+        )
 
     lines.append(
-        f"\nGNN leave-one-out CV across all {n_eval} labeled sample movies: "
+        f"\nGNN {split_strategy.upper()} across all {n_eval:,} labeled movies: "
         f"RMSE={gnn_rmse:.4f}, MAE={gnn_mae:.4f}. "
         "The three heuristic baselines only ever produced predictions for the three demo "
         "movies shown above (that's all the original pipeline computed), so no comparable "
-        "full-sample RMSE/MAE exists for them -- only the GNN's LOO-CV covers all 7 labeled "
-        "movies.\n"
+        f"full-sample RMSE/MAE exists for them -- only the GNN's {split_strategy.upper()} metric covers "
+        "all labeled movies.\n"
     )
-    lines.append(
-        "\n**Methodology note**: every number above is an out-of-sample prediction "
-        "(leave-one-out cross-validation -- each movie's prediction comes from a model that "
-        "never saw that movie's rating during training). On a sample this small (7 labeled "
-        "movies), a strong-looking RMSE only shows the pipeline runs correctly end-to-end, "
-        "not that the architecture works at scale -- a GNN can memorize 7 points as easily as "
-        "the existing LinearRegression baseline overfits them on this same sample "
-        "(R^2 ~= 0.42 on sample vs ~= 0.005 on the full, unincluded IMDb dataset).\n"
-    )
+    if global_mean_metrics is not None:
+        gm_rmse, gm_mae = global_mean_metrics
+        verdict = "beats" if gnn_rmse < gm_rmse else "does not beat"
+        lines.append(
+            f"\n**Global Mean baseline** (predict the train-label average for every test movie): "
+            f"RMSE={gm_rmse:.4f}, MAE={gm_mae:.4f} (same test split as the GNN's {split_strategy.upper()} metric above).\n"
+        )
+        lines.append(
+            f"\n**The GNN {verdict} this trivial baseline** on this run (GNN RMSE={gnn_rmse:.4f} vs. "
+            f"Global Mean RMSE={gm_rmse:.4f}). This is consistent with the very weak signal the full-scale "
+            "linear-regression heuristic already found in this data (R^2 ~= 0.02 on all labeled movies, vs. "
+            "R^2 ~= 0.42 on the tiny, unrepresentative 7-movie sample -- see the sample-scale note above): "
+            "actor PageRank/degree/cast-structure/community/genre features alone carry little signal about "
+            "a movie's aggregate rating at real scale. Plausible next steps to actually close this gap -- not "
+            "attempted here -- include more training epochs / wider neighbor sampling (this run used 10 "
+            "epochs, `num_neighbors: [15, 10]`, `hidden_dim: 64`), additional node features (e.g. runtime, "
+            "release year, cast size beyond a single log-count), or accepting that rating regression from "
+            "cast/graph structure alone is a genuinely hard problem at this scale.\n"
+        )
+    if split_strategy == "loo":
+        lines.append(
+            "\n**Methodology note**: every number above is an out-of-sample prediction "
+            "(leave-one-out cross-validation -- each movie's prediction comes from a model that "
+            "never saw that movie's rating during training). On a sample this small (7 labeled "
+            "movies), a strong-looking RMSE only shows the pipeline runs correctly end-to-end, "
+            "not that the architecture works at scale -- a GNN can memorize 7 points as easily as "
+            "the existing LinearRegression baseline overfits them on this same sample "
+            "(R^2 ~= 0.42 on this sample vs the full-scale numbers below).\n"
+        )
+    else:
+        lines.append(
+            "\n**Methodology note**: RMSE/MAE above are computed only from a genuinely held-out "
+            f"random test split ({n_eval:,} movies never seen during training); any in-sample "
+            "demo-movie predictions flagged above are excluded from these metrics. Unlike the tiny "
+            "sample, this is real evidence of (or against) the architecture generalizing, not just "
+            "proof the pipeline runs.\n"
+        )
     path.write_text("".join(lines))
     print(f"Wrote {path}")
 

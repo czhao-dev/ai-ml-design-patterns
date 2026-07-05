@@ -16,7 +16,7 @@ A monorepo of ten end-to-end machine learning projects spanning computer vision,
 | [Tensor Graph Inference Engine](#tensor-graph-inference-engine) | Inference Engines | C++17, header-only | Zero-allocation static-graph runtime; INT8 matmul; offline arena planner cuts memory ~37% |
 | [CNN-ViT Satellite Image Classifier](#cnn-vit-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
 | [ML Model Compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
-| [GNN Movie Recommender](#gnn-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN over IMDb graphs; top-N recommendation on MovieLens |
+| [GNN Movie Recommender](#gnn-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN benchmarked at full IMDb scale (240K movies) as well as a small sample; top-N recommendation on MovieLens |
 | [LSTM Transformer Climate Modeler](#lstm-transformer-climate-modeler) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
 
 ---
@@ -132,11 +132,11 @@ Three orthogonal compression techniques — pruning, post-training quantization,
 
 ### GNN Movie Recommender
 
-Graph feature engineering pipeline extended with a heterogeneous GNN, evaluated on two separate tasks.
+Graph feature engineering pipeline extended with a heterogeneous GNN, evaluated on two separate tasks at two different scales.
 
-- **Feature engineering (igraph):** Actor/movie networks built from IMDb data; actors ranked by PageRank, movie communities detected with Fast Greedy Newman, Jaccard movie-movie similarity computed — all kept exactly as in the original coursework pipeline.
-- **Heterogeneous GNN (PyTorch Geometric):** `HeteroConv` encoder with `GraphConv` for weighted relations and `SAGEConv` for unweighted bipartite edges; graph-derived features (PageRank, community ID, Jaccard similarity) used as node features.
-- **IMDb track:** Movie rating prediction benchmarked against neighborhood averaging, linear regression, and bipartite graph averaging baselines.
+- **Feature engineering (igraph):** Actor/movie networks built from IMDb data; actors ranked by PageRank, movie communities detected (Fast Greedy Newman by default, Louvain at full scale), Jaccard movie-movie similarity computed — all kept exactly as in the original coursework pipeline.
+- **Heterogeneous GNN (PyTorch Geometric):** `HeteroConv` encoder with `GraphConv` for weighted relations and `SAGEConv` for unweighted bipartite edges; graph-derived features (PageRank, community ID, Jaccard similarity) used as node features. Mini-batch `NeighborLoader` training for the full-scale graph, full-batch for the small sample and MovieLens.
+- **IMDb track, two scales:** a 7-movie hand-curated sample (leave-one-out CV, useful only to prove the pipeline runs) and a real full-scale run built from IMDb's official Non-Commercial Datasets (129,720 labeled movies, random holdout split) — benchmarked against neighborhood averaging, linear regression, and bipartite graph averaging baselines. **Honest full-scale finding:** the GNN (RMSE 1.35) does not beat a trivial train-mean baseline (RMSE 1.13) as configured here, consistent with the linear-regression heuristic's own R² ≈ 0.02 across all 129,720 movies — real evidence about generalization at scale, not just proof the pipeline runs.
 - **MovieLens track:** Genuine personalized top-N recommendation on `ml-latest-small` (943 users, ~9,700 movies), evaluated with Precision/Recall/NDCG@{5,10,20} against the full catalog — not sampled negatives.
 
 **Stack:** Python · PyTorch · PyTorch Geometric · igraph · scikit-learn

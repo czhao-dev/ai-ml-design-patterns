@@ -1,15 +1,24 @@
-# IMDb track, full-scale -- DOCUMENTED, NOT RUNNABLE IN THIS REPO.
+# IMDb track, full-scale -- runnable via scripts/download_imdb_full.py +
+# scripts/build_imdb_full_dataset.py (see README "With the full IMDb dataset").
 #
-# The full IMDb filmography dataset (~244K actors, ~254K movies, ~60M edges
-# per relation -- see the main README's Methodology section) is not included
-# here, same as today's igraph-only pipeline. This config exists to show the
-# architecture is configurable for that scale (deeper/wider encoder, holdout
-# split instead of LOO-CV), not because it has been run or benchmarked here.
+# Built from IMDb's Non-Commercial Datasets (https://datasets.imdbws.com/),
+# filtered to titleType=="movie" with numVotes>=25: ~240K labeled movies,
+# ~80K actors/actresses with >=5 credits (see scripts/build_imdb_full_dataset.py
+# for the exact filtering/dedup methodology). Not committed to the repo --
+# same policy as data/movielens/ (see .gitignore / README License).
 #
-# At that scale, full-graph training as implemented in gnn/training.py would
-# almost certainly need to be replaced with mini-batch neighbor sampling
-# (e.g. torch_geometric.loader.NeighborLoader) -- flagged as a known follow-up,
-# not designed in detail in this repo.
+# Full-batch training (gnn/training.py's train_imdb/predict_imdb) is not
+# practical at this scale (~277K nodes, ~36M edges across relations after both
+# directions) on a laptop CPU, so this config uses mini-batch neighbor sampling
+# (training.train_imdb_minibatch/predict_imdb_minibatch, PyTorch Geometric's
+# NeighborLoader) via the training.neighbor_loader block below. NeighborLoader
+# for heterogeneous graphs requires torch-sparse + torch-scatter (not needed by
+# the sample-scale configs) -- see README "With the full IMDb dataset".
+#
+# conv_type is "sage" rather than "gat" here (unlike earlier drafts of this
+# config) purely for CPU training speed at this scale; GATConv's attention
+# softmax adds real compute per sampled neighborhood without a demonstrated
+# accuracy win here -- swap to "gat" if you have GPU headroom to spare.
 task: node_regression
 seed: 1337
 
@@ -22,15 +31,18 @@ data:
 
 model:
   hidden_dim: 64
-  num_layers: 3
+  num_layers: 2
   dropout: 0.2
-  conv_type: gat
+  conv_type: sage
 
 training:
-  epochs: 100
+  epochs: 10
   lr: 0.005
   weight_decay: 0.0001
   device: null
+  neighbor_loader:
+    batch_size: 1024
+    num_neighbors: [15, 10]
 
 output:
   run_dir: experiments/runs/imdb_full

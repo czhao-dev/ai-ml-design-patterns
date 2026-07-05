@@ -42,6 +42,8 @@ def detect_communities(graph, method="fast_greedy", weights=None):
         return graph.community_infomap(edge_weights=weights)
     if method == "walktrap":
         return graph.community_walktrap(weights=weights).as_clustering()
+    if method == "multilevel":
+        return graph.as_undirected().community_multilevel(weights=weights)
     raise ValueError(f"Unknown community detection method: {method}")
 
 
@@ -63,11 +65,17 @@ DEMO_MOVIES = [
 # ---- Build the movie-movie graph and detect communities ----
 
 g = ig.Graph.Read_Ncol(str(EDGELIST_PATH), names=True, weights=True, directed=False)
-fgc = detect_communities(g, method="fast_greedy", weights=g.es["weight"])
+# COMMUNITY_METHOD lets full-scale runs opt into a scalable algorithm (e.g.
+# "multilevel"/Louvain) instead of fast_greedy, which is impractically slow on
+# graphs with millions of edges (see configs/imdb_full.yaml / README for the
+# scale this matters at). Default is unchanged so the sample-data pipeline's
+# behavior is untouched.
+community_method = os.environ.get("COMMUNITY_METHOD", "fast_greedy")
+fgc = detect_communities(g, method=community_method, weights=g.es["weight"])
 membership = {g.vs[i]["name"]: comm for i, comm in enumerate(fgc.membership)}
 
 print(f"Graph has {g.vcount()} vertices and {g.ecount()} edges.")
-print(f"Fast Greedy community detection found {len(fgc)} communities.\n")
+print(f"{community_method} community detection found {len(fgc)} communities.\n")
 
 # ---- Look up the canonical movie IDs for the demo movies ----
 
