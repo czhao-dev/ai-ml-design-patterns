@@ -2,19 +2,20 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A monorepo of nine end-to-end machine learning projects spanning computer vision, large language models, agentic AI and tool use, graph learning, time-series forecasting, model compression, production inference serving, and low-level inference engine design. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
+A monorepo of ten end-to-end machine learning projects spanning computer vision, large language models, agentic AI and tool use, graph learning, time-series forecasting, model compression, production inference serving, low-level inference engine design, and causal inference. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
 
 ## Projects at a Glance
 
 | Project | Area | Key Technologies | Standout |
 | --- | --- | --- | --- |
-| [CNN-ViT Satellite Image Classifier](#cnn-vit-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
-| [ML Model Compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
-| [Tensor Graph Inference Engine](#tensor-graph-inference-engine) | Inference Engines | C++17, header-only | Zero-allocation static-graph runtime; INT8 matmul; offline arena planner cuts memory ~37% |
-| [LLM Alignment Fine-Tuning](#llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
-| [Tiny LLM GPT](#tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
 | [GenAI RAG Chatbot](#gen-ai-rag-chatbot) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
 | [Agentic AI Tool Use](#agentic-ai-tool-use) | Agentic AI / Tool Use | OpenAI API, Python | Three from-scratch agent architectures (ReAct, Plan-and-Execute, Reflexion) benchmarked on a 35-task tool-use suite; 44 tests, zero real API calls |
+| [Churn Predictor](#churn-predictor-uplift-modeling-for-retention-targeting) | Causal Inference / Uplift Modeling | scikit-learn, EconML | Causal forest is the only model to beat random targeting (Qini +369); targeted policy cuts net losses 98.5% vs. blanket offers |
+| [LLM Alignment Fine-Tuning](#llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
+| [Tiny LLM GPT](#tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
+| [Tensor Graph Inference Engine](#tensor-graph-inference-engine) | Inference Engines | C++17, header-only | Zero-allocation static-graph runtime; INT8 matmul; offline arena planner cuts memory ~37% |
+| [ML Model Compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
+| [CNN-ViT Satellite Image Classifier](#cnn-vit-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
 | [GNN Movie Recommender](#gnn-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN over IMDb graphs; top-N recommendation on MovieLens |
 | [LSTM Transformer Climate Modeler](#lstm-transformer-climate-modeler) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
 
@@ -22,42 +23,43 @@ A monorepo of nine end-to-end machine learning projects spanning computer vision
 
 ## Project Details
 
-### CNN-ViT Satellite Image Classifier
+### GenAI RAG Chatbot
 
-Binary classification of 64×64 satellite image tiles as agricultural vs. non-agricultural land.
+A deployed RAG document Q&A app: upload a PDF, TXT, Markdown, CSV, or DOCX file and ask questions grounded in its content.
 
-- **Models:** Six-block CNN (32→1024 channels, 5×5 kernels) and CNN–Vision Transformer hybrid (CNN feature map tokenized and fed through multi-head self-attention blocks), each implemented independently in both Keras/TensorFlow and PyTorch — four models total, trained and evaluated in parallel across frameworks.
-- **Results:** PyTorch CNN 99.83%, Keras CNN 99.33%, PyTorch CNN-ViT 99.67%, Keras CNN-ViT 99.42% — all on a 1,200-image held-out split never seen during training.
-- **Inference server:** FastAPI app (`serve/`) loads all four models at startup and exposes `/health`, `/models`, and `POST /predict?model=` endpoints. Model backend is selectable per request. Deployed with Docker Compose; model weights mounted read-only at runtime to keep the image small.
-- **Notable:** Caught and fixed a data-leakage bug in the original evaluation methodology that scored models against the full training set rather than a held-out split.
+**Live demo:** https://rag-pdf-chatbot-715060982814.us-central1.run.app
 
-**Stack:** Python · PyTorch · Keras/TensorFlow · FastAPI · Uvicorn · Docker Compose
+- **RAG pipeline:** LangChain document loaders → `RecursiveCharacterTextSplitter` → Vertex AI `text-embedding-004` embeddings → Chroma vector store → `RetrievalQA` chain → Gemini 2.5 Flash answer with source grounding.
+- **Deployment:** Containerized with Docker and deployed to GCP Cloud Run with scale-to-zero cost controls; credentials handled via Application Default Credentials for local development.
+- **Interface:** Gradio web UI; standalone annotated scripts for each RAG concept (loading, splitting, embedding, retrieval) as reference implementations.
 
----
-
-### ML Model Compression
-
-Three orthogonal compression techniques — pruning, post-training quantization, and knowledge distillation — benchmarked against the PyTorch CNN and CNN-ViT models trained in `ml-satellite-image-classifier`, all scored on the same fixed held-out split for a controlled comparison.
-
-- **Pruning:** Unstructured global L1 magnitude pruning and structured L1 channel pruning (`torch.nn.utils.prune`), swept across 20–80% sparsity. Unstructured holds accuracy to 60% sparsity but doesn't reduce size/latency without sparse BLAS; structured produces real size/latency drops but collapses to the class prior by 40% sparsity without fine-tuning recovery — an intentionally honest "raw accuracy cliff" measurement.
-- **Quantization:** Static INT8 PTQ on the CNN (4× smaller, ~1.8× faster, no measurable accuracy loss) and dynamic INT8 PTQ on the CNN-ViT's linear layers. Required working around two undocumented gaps in the source architecture: eager-mode static quantization needs manual `QuantStub`/`DeQuantStub` insertion, and the CNN's `BatchNorm` layers (positioned after pooling, not fusable with the preceding conv) have no quantized kernel and must run in FP32 sandwiched between quant/dequant boundaries.
-- **Knowledge distillation:** A 3-block, ~259K-parameter `StudentCNN` distilled from the frozen CNN-ViT teacher (temperature-scaled KL + hard-label CE, with the standard T² gradient-scaling term) reaches 99.9%+ accuracy at ~150× smaller than the teacher and sub-millisecond CPU latency — one of several places results diverged from the initial write-up (~12× was the original estimate) once actually measured.
-- **Reproducibility groundwork:** Corrected the CNN-ViT's constructor defaults (`depth=6, heads=8`) against its real trained hyperparameters (`depth=3, heads=6`) before any of the above would load correctly, and standardized every technique on a single canonical held-out split.
-
-**Stack:** Python · PyTorch · `torch.ao.quantization` · torchvision · scikit-learn
+**Stack:** Python · LangChain · Google Vertex AI (Gemini + text-embedding-004) · Chroma · Gradio · Docker · Cloud Run
 
 ---
 
-### Tensor Graph Inference Engine
+### Agentic AI Tool Use
 
-A minimal, header-only, CPU-only static-graph neural network inference engine (in the spirit of a stripped-down ONNX Runtime or GGML): an offline compiler plans a model's entire memory layout in advance so the runtime forward pass performs zero dynamic allocation.
+Three agent architectures — ReAct, Plan-and-Execute, and Reflexion — implemented from scratch directly against the OpenAI Chat Completions tool-use API (no LangChain `AgentExecutor`), benchmarked head-to-head on the same hand-built 35-task suite.
 
-- **Offline compiler:** Builds an in-memory DAG (a 3-layer MLP with a residual/skip connection), quantizes weights and activations to INT8 (per-tensor symmetric scale, INT32 accumulation, fused bias), computes the exact lifetime of every intermediate tensor, and runs a greedy interval allocator to pack them into a single contiguous arena — reusing memory for tensors whose lifetimes don't overlap.
-- **Zero-allocation runtime:** The header-only `Engine` loads a compiled binary artifact once and executes `forward()` with pure pointer arithmetic; proven with a test that overrides `operator new`/`delete` and asserts zero allocations across repeated forward passes.
-- **Results:** The demo model's planned arena comes out to 39,904 bytes versus a naive 63,072-byte sum of every intermediate tensor — a ~37% reduction from lifetime-aware reuse alone.
-- **Testing:** Op-level correctness (quantize round-trip, INT8 matmul vs. an fp32 reference), arena-planner invariants (exact offset assertions on synthetic DAGs with known overlapping/disjoint lifetimes), end-to-end accuracy against the fp32 reference, and the zero-allocation proof above.
+- **Architectures:** ReAct is a single flat tool-use loop with tools bound from turn one; Plan-and-Execute runs an upfront planning call with tools deliberately unbound (so nothing can execute before a plan exists), then one bounded sub-loop per subtask, then a synthesis call; Reflexion retries (up to 3 attempts) on explicit failure signals — an unresolved tool error, exhausted step budget, or the model admitting failure — never the ground-truth answer — with a self-critique call between attempts that sees only the failed transcript.
+- **Hand-rolled tools:** an AST-whitelist calculator (no `eval()`), a sandboxed subprocess Python executor (static import/builtin pre-check, minimal env with no API key, timeout + POSIX resource limits), and an Okapi BM25 retrieval index built from scratch — no scikit-learn, no embeddings.
+- **Benchmark:** 35 hand-written tasks (arithmetic, multi-hop QA, code execution, injected-error recovery) with unambiguous ground truth, evaluated over a fully original synthetic knowledge base (17 documents describing fictional companies/people/products with deliberately chained facts) — no real documents, no external search API, no licensing risk.
+- **Testing:** 44 tests against a hand-written fake OpenAI client verify each architecture's control flow (stopping conditions, tool dispatch, retry-after-failure logic) with zero real API calls and zero cost, including a regression guard that ground truth never leaks into Reflexion's self-critique prompt.
 
-**Stack:** C++17 · header-only · CMake/Make · GitHub Actions CI
+**Stack:** Python · OpenAI API · pytest · Matplotlib
+
+---
+
+### Churn Predictor: Uplift Modeling for Retention Targeting
+
+Uplift modeling (not classification) for a retention-offer targeting decision: which customers should actually receive an offer, versus who would convert/stay anyway.
+
+- **Real RCT, not a simulation**: Kevin Hillstrom's MineThatData email challenge — 64,000 customers genuinely randomized into email/no-email arms — so every causal estimate below is computed from real counterfactual data, not an invented ground-truth treatment effect. Randomization is verified (all covariate SMDs < 0.02) before any downstream estimate is trusted.
+- **Three CATE estimators compared head-to-head**: a hand-rolled T-learner, a hand-rolled X-learner (Künzel et al., 2019, with propensity-weighted blending), and a causal forest (`econml`'s `CausalForestDML`) — evaluated against a naive "predict conversion, ignore treatment" baseline on identical features and splits.
+- **Causal-inference metrics, not classification metrics**: Qini curves/coefficients, AUUC, uplift@k, and per-decile calibration, all built from group-level treated-vs-control comparisons on held-out data since individual treatment effects are fundamentally unobservable. Only the causal forest beats random targeting (Qini +369); the hand-rolled T-/X-learners underperform random ranking on this dataset — reported as a real finding, not adjusted away.
+- **A genuine $ number**: targeting the top 5% of customers by causal-forest-predicted uplift reduces net losses by 98.5% versus blanket-targeting everyone (-$198 vs. -$13,170 at an assumed $2/offer cost), while still capturing 12.6% of the total achievable incremental revenue for 2.5% of the campaign cost.
+
+**Stack:** Python · scikit-learn · EconML (`CausalForestDML`) · pandas · Matplotlib
 
 ---
 
@@ -89,30 +91,42 @@ A from-scratch GPT-style language model covering the complete pipeline from raw 
 
 ---
 
-### GenAI RAG Chatbot
+### Tensor Graph Inference Engine
 
-A deployed RAG document Q&A app: upload a PDF, TXT, Markdown, CSV, or DOCX file and ask questions grounded in its content.
+A minimal, header-only, CPU-only static-graph neural network inference engine (in the spirit of a stripped-down ONNX Runtime or GGML): an offline compiler plans a model's entire memory layout in advance so the runtime forward pass performs zero dynamic allocation.
 
-**Live demo:** https://rag-pdf-chatbot-715060982814.us-central1.run.app
+- **Offline compiler:** Builds an in-memory DAG (a 3-layer MLP with a residual/skip connection), quantizes weights and activations to INT8 (per-tensor symmetric scale, INT32 accumulation, fused bias), computes the exact lifetime of every intermediate tensor, and runs a greedy interval allocator to pack them into a single contiguous arena — reusing memory for tensors whose lifetimes don't overlap.
+- **Zero-allocation runtime:** The header-only `Engine` loads a compiled binary artifact once and executes `forward()` with pure pointer arithmetic; proven with a test that overrides `operator new`/`delete` and asserts zero allocations across repeated forward passes.
+- **Results:** The demo model's planned arena comes out to 39,904 bytes versus a naive 63,072-byte sum of every intermediate tensor — a ~37% reduction from lifetime-aware reuse alone.
+- **Testing:** Op-level correctness (quantize round-trip, INT8 matmul vs. an fp32 reference), arena-planner invariants (exact offset assertions on synthetic DAGs with known overlapping/disjoint lifetimes), end-to-end accuracy against the fp32 reference, and the zero-allocation proof above.
 
-- **RAG pipeline:** LangChain document loaders → `RecursiveCharacterTextSplitter` → Vertex AI `text-embedding-004` embeddings → Chroma vector store → `RetrievalQA` chain → Gemini 2.5 Flash answer with source grounding.
-- **Deployment:** Containerized with Docker and deployed to GCP Cloud Run with scale-to-zero cost controls; credentials handled via Application Default Credentials for local development.
-- **Interface:** Gradio web UI; standalone annotated scripts for each RAG concept (loading, splitting, embedding, retrieval) as reference implementations.
-
-**Stack:** Python · LangChain · Google Vertex AI (Gemini + text-embedding-004) · Chroma · Gradio · Docker · Cloud Run
+**Stack:** C++17 · header-only · CMake/Make · GitHub Actions CI
 
 ---
 
-### Agentic AI Tool Use
+### ML Model Compression
 
-Three agent architectures — ReAct, Plan-and-Execute, and Reflexion — implemented from scratch directly against the OpenAI Chat Completions tool-use API (no LangChain `AgentExecutor`), benchmarked head-to-head on the same hand-built 35-task suite.
+Three orthogonal compression techniques — pruning, post-training quantization, and knowledge distillation — benchmarked against the PyTorch CNN and CNN-ViT models trained in `ml-satellite-image-classifier`, all scored on the same fixed held-out split for a controlled comparison.
 
-- **Architectures:** ReAct is a single flat tool-use loop with tools bound from turn one; Plan-and-Execute runs an upfront planning call with tools deliberately unbound (so nothing can execute before a plan exists), then one bounded sub-loop per subtask, then a synthesis call; Reflexion retries (up to 3 attempts) on explicit failure signals — an unresolved tool error, exhausted step budget, or the model admitting failure — never the ground-truth answer — with a self-critique call between attempts that sees only the failed transcript.
-- **Hand-rolled tools:** an AST-whitelist calculator (no `eval()`), a sandboxed subprocess Python executor (static import/builtin pre-check, minimal env with no API key, timeout + POSIX resource limits), and an Okapi BM25 retrieval index built from scratch — no scikit-learn, no embeddings.
-- **Benchmark:** 35 hand-written tasks (arithmetic, multi-hop QA, code execution, injected-error recovery) with unambiguous ground truth, evaluated over a fully original synthetic knowledge base (17 documents describing fictional companies/people/products with deliberately chained facts) — no real documents, no external search API, no licensing risk.
-- **Testing:** 44 tests against a hand-written fake OpenAI client verify each architecture's control flow (stopping conditions, tool dispatch, retry-after-failure logic) with zero real API calls and zero cost, including a regression guard that ground truth never leaks into Reflexion's self-critique prompt.
+- **Pruning:** Unstructured global L1 magnitude pruning and structured L1 channel pruning (`torch.nn.utils.prune`), swept across 20–80% sparsity. Unstructured holds accuracy to 60% sparsity but doesn't reduce size/latency without sparse BLAS; structured produces real size/latency drops but collapses to the class prior by 40% sparsity without fine-tuning recovery — an intentionally honest "raw accuracy cliff" measurement.
+- **Quantization:** Static INT8 PTQ on the CNN (4× smaller, ~1.8× faster, no measurable accuracy loss) and dynamic INT8 PTQ on the CNN-ViT's linear layers. Required working around two undocumented gaps in the source architecture: eager-mode static quantization needs manual `QuantStub`/`DeQuantStub` insertion, and the CNN's `BatchNorm` layers (positioned after pooling, not fusable with the preceding conv) have no quantized kernel and must run in FP32 sandwiched between quant/dequant boundaries.
+- **Knowledge distillation:** A 3-block, ~259K-parameter `StudentCNN` distilled from the frozen CNN-ViT teacher (temperature-scaled KL + hard-label CE, with the standard T² gradient-scaling term) reaches 99.9%+ accuracy at ~150× smaller than the teacher and sub-millisecond CPU latency — one of several places results diverged from the initial write-up (~12× was the original estimate) once actually measured.
+- **Reproducibility groundwork:** Corrected the CNN-ViT's constructor defaults (`depth=6, heads=8`) against its real trained hyperparameters (`depth=3, heads=6`) before any of the above would load correctly, and standardized every technique on a single canonical held-out split.
 
-**Stack:** Python · OpenAI API · pytest · Matplotlib
+**Stack:** Python · PyTorch · `torch.ao.quantization` · torchvision · scikit-learn
+
+---
+
+### CNN-ViT Satellite Image Classifier
+
+Binary classification of 64×64 satellite image tiles as agricultural vs. non-agricultural land.
+
+- **Models:** Six-block CNN (32→1024 channels, 5×5 kernels) and CNN–Vision Transformer hybrid (CNN feature map tokenized and fed through multi-head self-attention blocks), each implemented independently in both Keras/TensorFlow and PyTorch — four models total, trained and evaluated in parallel across frameworks.
+- **Results:** PyTorch CNN 99.83%, Keras CNN 99.33%, PyTorch CNN-ViT 99.67%, Keras CNN-ViT 99.42% — all on a 1,200-image held-out split never seen during training.
+- **Inference server:** FastAPI app (`serve/`) loads all four models at startup and exposes `/health`, `/models`, and `POST /predict?model=` endpoints. Model backend is selectable per request. Deployed with Docker Compose; model weights mounted read-only at runtime to keep the image small.
+- **Notable:** Caught and fixed a data-leakage bug in the original evaluation methodology that scored models against the full training set rather than a held-out split.
+
+**Stack:** Python · PyTorch · Keras/TensorFlow · FastAPI · Uvicorn · Docker Compose
 
 ---
 
@@ -181,6 +195,12 @@ Papers and resources that directly informed the techniques used across these pro
 **Graph learning**
 - Fey, M., and Lenssen, J.E. "Fast Graph Representation Learning with PyTorch Geometric." *ICLR Workshop*, 2019. [arxiv.org/abs/1903.02428](https://arxiv.org/abs/1903.02428) *(ml-movie-recommender)*
 
+**Causal inference and uplift modeling**
+- Künzel, S.R., Sekhon, J.S., Bickel, P.J., and Yu, B. "Metalearners for Estimating Heterogeneous Treatment Effects using Machine Learning." *PNAS*, 2019. [arxiv.org/abs/1706.03461](https://arxiv.org/abs/1706.03461) *(churn-predictor)*
+- Athey, S., and Wager, S. "Estimating Treatment Effects with Causal Forests: An Application." *Observational Studies*, 2019. [arxiv.org/abs/1902.07409](https://arxiv.org/abs/1902.07409) *(churn-predictor)*
+- Radcliffe, N.J., and Surry, P.D. "Real-World Uplift Modelling with Significance-Based Uplift Trees." *Portrait Technical Report*, 2011. *(churn-predictor)*
+- Gutierrez, P., and Gérardy, J-Y. "Causal Inference and Uplift Modelling: A Review of the Literature." *JMLR Workshop and Conference Proceedings*, 2017. *(churn-predictor)*
+
 **Transfer learning and convolutional networks**
 - Simonyan, K., and Zisserman, A. "Very Deep Convolutional Networks for Large-Scale Image Recognition." *ICLR*, 2015. [arxiv.org/abs/1409.1556](https://arxiv.org/abs/1409.1556) *(ml-satellite-image-classifier)*
 - Russakovsky, O., et al. "ImageNet Large Scale Visual Recognition Challenge." *IJCV*, 2015. [arxiv.org/abs/1409.0575](https://arxiv.org/abs/1409.0575) *(ml-satellite-image-classifier)*
@@ -194,6 +214,7 @@ Papers and resources that directly informed the techniques used across these pro
 **Datasets**
 - NOAA Global Historical Climatology Network Daily (GHCN-D). [ncei.noaa.gov](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily) *(ml-boston-climate-modeler)*
 - Harper, F.M., and Konstan, J.A. "The MovieLens Datasets: History and Context." *ACM TIIS*, 5(4):1–19, 2015. [doi.org/10.1145/2827872](https://doi.org/10.1145/2827872) *(ml-movie-recommender)*
+- Hillstrom, K. "The MineThatData E-Mail Analytics And Data Mining Challenge." 2008. [minethatdata.com](http://www.minethatdata.com/Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv) *(churn-predictor)*
 
 ## License
 
