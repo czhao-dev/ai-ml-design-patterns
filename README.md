@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A monorepo of eight end-to-end machine learning projects spanning computer vision, large language models, graph learning, time-series forecasting, model compression, production inference serving, and low-level inference engine design. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
+A monorepo of nine end-to-end machine learning projects spanning computer vision, large language models, agentic AI and tool use, graph learning, time-series forecasting, model compression, production inference serving, and low-level inference engine design. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
 
 ## Projects at a Glance
 
@@ -14,6 +14,7 @@ A monorepo of eight end-to-end machine learning projects spanning computer visio
 | [ml-llm-alignment-fine-tuning](#ml-llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
 | [ml-tiny-llm-gpt](#ml-tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
 | [ml-gcp-vertex-rag-chatbot](#ml-gcp-vertex-rag-chatbot) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
+| [ml-agentic-tool-use-bakeoff](#ml-agentic-tool-use-bakeoff) | Agentic AI / Tool Use | OpenAI API, Python | Three from-scratch agent architectures (ReAct, Plan-and-Execute, Reflexion) benchmarked on a 35-task tool-use suite; 44 tests, zero real API calls |
 | [ml-movie-recommender](#ml-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN over IMDb graphs; top-N recommendation on MovieLens |
 | [ml-boston-climate-modeler](#ml-boston-climate-modeler) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
 
@@ -102,6 +103,19 @@ A deployed RAG document Q&A app: upload a PDF, TXT, Markdown, CSV, or DOCX file 
 
 ---
 
+### ml-agentic-tool-use-bakeoff
+
+Three agent architectures — ReAct, Plan-and-Execute, and Reflexion — implemented from scratch directly against the OpenAI Chat Completions tool-use API (no LangChain `AgentExecutor`), benchmarked head-to-head on the same hand-built 35-task suite.
+
+- **Architectures:** ReAct is a single flat tool-use loop with tools bound from turn one; Plan-and-Execute runs an upfront planning call with tools deliberately unbound (so nothing can execute before a plan exists), then one bounded sub-loop per subtask, then a synthesis call; Reflexion retries (up to 3 attempts) on explicit failure signals — an unresolved tool error, exhausted step budget, or the model admitting failure — never the ground-truth answer — with a self-critique call between attempts that sees only the failed transcript.
+- **Hand-rolled tools:** an AST-whitelist calculator (no `eval()`), a sandboxed subprocess Python executor (static import/builtin pre-check, minimal env with no API key, timeout + POSIX resource limits), and an Okapi BM25 retrieval index built from scratch — no scikit-learn, no embeddings.
+- **Benchmark:** 35 hand-written tasks (arithmetic, multi-hop QA, code execution, injected-error recovery) with unambiguous ground truth, evaluated over a fully original synthetic knowledge base (17 documents describing fictional companies/people/products with deliberately chained facts) — no real documents, no external search API, no licensing risk.
+- **Testing:** 44 tests against a hand-written fake OpenAI client verify each architecture's control flow (stopping conditions, tool dispatch, retry-after-failure logic) with zero real API calls and zero cost, including a regression guard that ground truth never leaks into Reflexion's self-critique prompt.
+
+**Stack:** Python · OpenAI API · pytest · Matplotlib
+
+---
+
 ### ml-movie-recommender
 
 Graph feature engineering pipeline extended with a heterogeneous GNN, evaluated on two separate tasks.
@@ -157,6 +171,12 @@ Papers and resources that directly informed the techniques used across these pro
 
 **Retrieval-augmented generation**
 - Lewis, P., et al. "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks." *NeurIPS*, 2020. [arxiv.org/abs/2005.11401](https://arxiv.org/abs/2005.11401) *(ml-gcp-vertex-rag-chatbot)*
+
+**Agentic AI and tool use**
+- Yao, S., et al. "ReAct: Synergizing Reasoning and Acting in Language Models." *ICLR*, 2023. [arxiv.org/abs/2210.03629](https://arxiv.org/abs/2210.03629) *(ml-agentic-tool-use-bakeoff)*
+- Shinn, N., et al. "Reflexion: Language Agents with Verbal Reinforcement Learning." *NeurIPS*, 2023. [arxiv.org/abs/2303.11366](https://arxiv.org/abs/2303.11366) *(ml-agentic-tool-use-bakeoff)*
+- Wang, L., et al. "Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models." *ACL*, 2023. [arxiv.org/abs/2305.04091](https://arxiv.org/abs/2305.04091) *(ml-agentic-tool-use-bakeoff)*
+- Robertson, S., and Zaragoza, H. "The Probabilistic Relevance Framework: BM25 and Beyond." *Foundations and Trends in Information Retrieval*, 2009. [doi.org/10.1561/1500000019](https://doi.org/10.1561/1500000019) *(ml-agentic-tool-use-bakeoff)*
 
 **Graph learning**
 - Fey, M., and Lenssen, J.E. "Fast Graph Representation Learning with PyTorch Geometric." *ICLR Workshop*, 2019. [arxiv.org/abs/1903.02428](https://arxiv.org/abs/1903.02428) *(ml-movie-recommender)*

@@ -1,0 +1,4 @@
+openai==2.44.0
+python-dotenv==1.0.1
+matplotlib==3.9.2
+pytest==8.3.3

@@ -1,0 +1,19 @@
+[
+  { "doc_id": "company_astracorp", "title": "AstraCorp", "path": "company_astracorp.md" },
+  { "doc_id": "company_northfen_robotics", "title": "Northfen Robotics", "path": "company_northfen_robotics.md" },
+  { "doc_id": "company_veltrix_systems", "title": "Veltrix Systems", "path": "company_veltrix_systems.md" },
+  { "doc_id": "company_calderon_biotech", "title": "Calderon Biotech", "path": "company_calderon_biotech.md" },
+  { "doc_id": "company_ryn_media_group", "title": "Ryn Media Group", "path": "company_ryn_media_group.md" },
+  { "doc_id": "person_jane_okoye", "title": "Jane Okoye", "path": "person_jane_okoye.md" },
+  { "doc_id": "person_marcus_lindqvist", "title": "Marcus Lindqvist", "path": "person_marcus_lindqvist.md" },
+  { "doc_id": "person_priya_chandrasekaran", "title": "Priya Chandrasekaran", "path": "person_priya_chandrasekaran.md" },
+  { "doc_id": "person_tomas_reyes", "title": "Tomas Reyes", "path": "person_tomas_reyes.md" },
+  { "doc_id": "person_ingrid_sato", "title": "Ingrid Sato", "path": "person_ingrid_sato.md" },
+  { "doc_id": "person_devon_marsh", "title": "Devon Marsh", "path": "person_devon_marsh.md" },
+  { "doc_id": "person_naledi_vantongeren", "title": "Naledi Vantongeren", "path": "person_naledi_vantongeren.md" },
+  { "doc_id": "product_widget_x1", "title": "Widget X1", "path": "product_widget_x1.md" },
+  { "doc_id": "product_sentrybot", "title": "SentryBot", "path": "product_sentrybot.md" },
+  { "doc_id": "product_helio_drive", "title": "Helio Drive", "path": "product_helio_drive.md" },
+  { "doc_id": "product_cardiolume", "title": "CardioLume", "path": "product_cardiolume.md" },
+  { "doc_id": "product_streamcast_pro", "title": "StreamCast Pro", "path": "product_streamcast_pro.md" }
+]
