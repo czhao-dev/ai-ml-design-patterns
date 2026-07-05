@@ -11,11 +11,11 @@ A monorepo of ten end-to-end machine learning projects spanning computer vision,
 | [GenAI RAG Chatbot](#gen-ai-rag-chatbot) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
 | [Agentic AI Tool Use](#agentic-ai-tool-use) | Agentic AI / Tool Use | OpenAI API, Python | Three from-scratch agent architectures (ReAct, Plan-and-Execute, Reflexion) benchmarked on a 35-task tool-use suite; 44 tests, zero real API calls |
 | [Churn Predictor](#churn-predictor-uplift-modeling-for-retention-targeting) | Causal Inference / Uplift Modeling | scikit-learn, EconML | Causal forest is the only model to beat random targeting (Qini +369); targeted policy cuts net losses 98.5% vs. blanket offers |
-| [LLM Alignment Fine-Tuning](#llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
 | [Tiny LLM GPT](#tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
+| [LLM Alignment Fine-Tuning](#llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
 | [Tensor Graph Inference Engine](#tensor-graph-inference-engine) | Inference Engines | C++17, header-only | Zero-allocation static-graph runtime; INT8 matmul; offline arena planner cuts memory ~37% |
-| [ML Model Compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
 | [CNN-ViT Satellite Image Classifier](#cnn-vit-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
+| [ML Model Compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
 | [GNN Movie Recommender](#gnn-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN over IMDb graphs; top-N recommendation on MovieLens |
 | [LSTM Transformer Climate Modeler](#lstm-transformer-climate-modeler) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
 
@@ -63,20 +63,6 @@ Uplift modeling (not classification) for a retention-offer targeting decision: w
 
 ---
 
-### LLM Alignment Fine-Tuning
-
-Four LLM alignment techniques implemented end-to-end, each with its own training objective and evaluation metric — all locally runnable on a laptop CPU.
-
-- **Supervised fine-tuning (SFT):** LoRA-adapts `facebook/opt-350m` on CodeAlpaca-20k with TRL's `SFTTrainer`; evaluated with SacreBLEU before and after fine-tuning.
-- **Reward modeling:** GPT-2 + LoRA trained on chosen/rejected response pairs with `RewardTrainer`; reaches **0.96 pairwise ranking accuracy** on a held-out preference set.
-- **PPO RLHF:** `gpt2-imdb` steered toward positive and negative sentiment with `PPOTrainer` against a sentiment-classifier reward; mean reward improves from 0.24 → 1.27 (positive policy) and −0.32 → 0.56 (negative policy).
-- **DPO:** GPT-2 + LoRA fine-tuned directly on preference pairs with `DPOTrainer` (no separate reward model or RL loop); reaches **0.70 reward accuracy** on held-out pairs.
-- Every script replaces commented-out or pre-downloaded training from the source notebooks with real, locally-runnable training — every number above comes from an actual training run.
-
-**Stack:** Python · PyTorch · HuggingFace Transformers · TRL · LoRA (PEFT)
-
----
-
 ### Tiny LLM GPT
 
 A from-scratch GPT-style language model covering the complete pipeline from raw text to generated output.
@@ -88,6 +74,20 @@ A from-scratch GPT-style language model covering the complete pipeline from raw 
 - Intentionally sized to run on consumer hardware while demonstrating every component of a modern LLM training stack.
 
 **Stack:** Python · PyTorch · AWS EC2
+
+---
+
+### LLM Alignment Fine-Tuning
+
+Four LLM alignment techniques implemented end-to-end, each with its own training objective and evaluation metric — all locally runnable on a laptop CPU.
+
+- **Supervised fine-tuning (SFT):** LoRA-adapts `facebook/opt-350m` on CodeAlpaca-20k with TRL's `SFTTrainer`; evaluated with SacreBLEU before and after fine-tuning.
+- **Reward modeling:** GPT-2 + LoRA trained on chosen/rejected response pairs with `RewardTrainer`; reaches **0.96 pairwise ranking accuracy** on a held-out preference set.
+- **PPO RLHF:** `gpt2-imdb` steered toward positive and negative sentiment with `PPOTrainer` against a sentiment-classifier reward; mean reward improves from 0.24 → 1.27 (positive policy) and −0.32 → 0.56 (negative policy).
+- **DPO:** GPT-2 + LoRA fine-tuned directly on preference pairs with `DPOTrainer` (no separate reward model or RL loop); reaches **0.70 reward accuracy** on held-out pairs.
+- Every script replaces commented-out or pre-downloaded training from the source notebooks with real, locally-runnable training — every number above comes from an actual training run.
+
+**Stack:** Python · PyTorch · HuggingFace Transformers · TRL · LoRA (PEFT)
 
 ---
 
@@ -104,19 +104,6 @@ A minimal, header-only, CPU-only static-graph neural network inference engine (i
 
 ---
 
-### ML Model Compression
-
-Three orthogonal compression techniques — pruning, post-training quantization, and knowledge distillation — benchmarked against the PyTorch CNN and CNN-ViT models trained in `ml-satellite-image-classifier`, all scored on the same fixed held-out split for a controlled comparison.
-
-- **Pruning:** Unstructured global L1 magnitude pruning and structured L1 channel pruning (`torch.nn.utils.prune`), swept across 20–80% sparsity. Unstructured holds accuracy to 60% sparsity but doesn't reduce size/latency without sparse BLAS; structured produces real size/latency drops but collapses to the class prior by 40% sparsity without fine-tuning recovery — an intentionally honest "raw accuracy cliff" measurement.
-- **Quantization:** Static INT8 PTQ on the CNN (4× smaller, ~1.8× faster, no measurable accuracy loss) and dynamic INT8 PTQ on the CNN-ViT's linear layers. Required working around two undocumented gaps in the source architecture: eager-mode static quantization needs manual `QuantStub`/`DeQuantStub` insertion, and the CNN's `BatchNorm` layers (positioned after pooling, not fusable with the preceding conv) have no quantized kernel and must run in FP32 sandwiched between quant/dequant boundaries.
-- **Knowledge distillation:** A 3-block, ~259K-parameter `StudentCNN` distilled from the frozen CNN-ViT teacher (temperature-scaled KL + hard-label CE, with the standard T² gradient-scaling term) reaches 99.9%+ accuracy at ~150× smaller than the teacher and sub-millisecond CPU latency — one of several places results diverged from the initial write-up (~12× was the original estimate) once actually measured.
-- **Reproducibility groundwork:** Corrected the CNN-ViT's constructor defaults (`depth=6, heads=8`) against its real trained hyperparameters (`depth=3, heads=6`) before any of the above would load correctly, and standardized every technique on a single canonical held-out split.
-
-**Stack:** Python · PyTorch · `torch.ao.quantization` · torchvision · scikit-learn
-
----
-
 ### CNN-ViT Satellite Image Classifier
 
 Binary classification of 64×64 satellite image tiles as agricultural vs. non-agricultural land.
@@ -127,6 +114,19 @@ Binary classification of 64×64 satellite image tiles as agricultural vs. non-ag
 - **Notable:** Caught and fixed a data-leakage bug in the original evaluation methodology that scored models against the full training set rather than a held-out split.
 
 **Stack:** Python · PyTorch · Keras/TensorFlow · FastAPI · Uvicorn · Docker Compose
+
+---
+
+### ML Model Compression
+
+Three orthogonal compression techniques — pruning, post-training quantization, and knowledge distillation — benchmarked against the PyTorch CNN and CNN-ViT models trained in `ml-satellite-image-classifier`, all scored on the same fixed held-out split for a controlled comparison.
+
+- **Pruning:** Unstructured global L1 magnitude pruning and structured L1 channel pruning (`torch.nn.utils.prune`), swept across 20–80% sparsity. Unstructured holds accuracy to 60% sparsity but doesn't reduce size/latency without sparse BLAS; structured produces real size/latency drops but collapses to the class prior by 40% sparsity without fine-tuning recovery — an intentionally honest "raw accuracy cliff" measurement.
+- **Quantization:** Static INT8 PTQ on the CNN (4× smaller, ~1.8× faster, no measurable accuracy loss) and dynamic INT8 PTQ on the CNN-ViT's linear layers. Required working around two undocumented gaps in the source architecture: eager-mode static quantization needs manual `QuantStub`/`DeQuantStub` insertion, and the CNN's `BatchNorm` layers (positioned after pooling, not fusable with the preceding conv) have no quantized kernel and must run in FP32 sandwiched between quant/dequant boundaries.
+- **Knowledge distillation:** A 3-block, ~259K-parameter `StudentCNN` distilled from the frozen CNN-ViT teacher (temperature-scaled KL + hard-label CE, with the standard T² gradient-scaling term) reaches 99.9%+ accuracy at ~150× smaller than the teacher and sub-millisecond CPU latency — one of several places results diverged from the initial write-up (~12× was the original estimate) once actually measured.
+- **Reproducibility groundwork:** Corrected the CNN-ViT's constructor defaults (`depth=6, heads=8`) against its real trained hyperparameters (`depth=3, heads=6`) before any of the above would load correctly, and standardized every technique on a single canonical held-out split.
+
+**Stack:** Python · PyTorch · `torch.ao.quantization` · torchvision · scikit-learn
 
 ---
 
