@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A monorepo of ten end-to-end machine learning projects spanning computer vision, large language models, agentic AI and tool use, graph learning, time-series forecasting, model compression, production inference serving, low-level inference engine design, and causal inference. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
+A monorepo of nine end-to-end machine learning projects spanning computer vision, large language models, agentic AI and tool use, graph learning, time-series forecasting, model compression, production inference serving, and causal inference. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
 
 ## Projects at a Glance
 
@@ -13,7 +13,6 @@ A monorepo of ten end-to-end machine learning projects spanning computer vision,
 | [Churn Predictor](#churn-predictor-uplift-modeling-for-retention-targeting) | Causal Inference / Uplift Modeling | scikit-learn, EconML | Causal forest is the only model to beat random targeting (Qini +369); targeted policy cuts net losses 98.5% vs. blanket offers |
 | [Tiny LLM GPT](#tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
 | [LLM Alignment Fine-Tuning](#llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
-| [Tensor Graph Inference Engine](#tensor-graph-inference-engine) | Inference Engines | C++17, header-only | Zero-allocation static-graph runtime; INT8 matmul; offline arena planner cuts memory ~37% |
 | [CNN-ViT Satellite Image Classifier](#cnn-vit-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
 | [ML Model Compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
 | [GNN Movie Recommender](#gnn-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN benchmarked at full IMDb scale (240K movies) as well as a small sample; top-N recommendation on MovieLens |
@@ -88,19 +87,6 @@ Four LLM alignment techniques implemented end-to-end, each with its own training
 - Every script replaces commented-out or pre-downloaded training from the source notebooks with real, locally-runnable training — every number above comes from an actual training run.
 
 **Stack:** Python · PyTorch · HuggingFace Transformers · TRL · LoRA (PEFT)
-
----
-
-### Tensor Graph Inference Engine
-
-A minimal, header-only, CPU-only static-graph neural network inference engine (in the spirit of a stripped-down ONNX Runtime or GGML): an offline compiler plans a model's entire memory layout in advance so the runtime forward pass performs zero dynamic allocation.
-
-- **Offline compiler:** Builds an in-memory DAG (a 3-layer MLP with a residual/skip connection), quantizes weights and activations to INT8 (per-tensor symmetric scale, INT32 accumulation, fused bias), computes the exact lifetime of every intermediate tensor, and runs a greedy interval allocator to pack them into a single contiguous arena — reusing memory for tensors whose lifetimes don't overlap.
-- **Zero-allocation runtime:** The header-only `Engine` loads a compiled binary artifact once and executes `forward()` with pure pointer arithmetic; proven with a test that overrides `operator new`/`delete` and asserts zero allocations across repeated forward passes.
-- **Results:** The demo model's planned arena comes out to 39,904 bytes versus a naive 63,072-byte sum of every intermediate tensor — a ~37% reduction from lifetime-aware reuse alone.
-- **Testing:** Op-level correctness (quantize round-trip, INT8 matmul vs. an fp32 reference), arena-planner invariants (exact offset assertions on synthetic DAGs with known overlapping/disjoint lifetimes), end-to-end accuracy against the fp32 reference, and the zero-allocation proof above.
-
-**Stack:** C++17 · header-only · CMake/Make · GitHub Actions CI
 
 ---
 
@@ -208,7 +194,7 @@ Papers and resources that directly informed the techniques used across these pro
 **Model compression**
 - Han, S., Pool, J., Tran, J., and Dally, W.J. "Learning Both Weights and Connections for Efficient Neural Networks." *NeurIPS*, 2015. [arxiv.org/abs/1506.02626](https://arxiv.org/abs/1506.02626) *(ml-model-compression)*
 - Molchanov, P., Tyree, S., Karras, T., Aila, T., and Kautz, J. "Pruning Convolutional Neural Networks for Resource Efficient Inference." *ICLR*, 2017. [arxiv.org/abs/1611.06440](https://arxiv.org/abs/1611.06440) *(ml-model-compression)*
-- Jacob, B., et al. "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference." *CVPR*, 2018. [arxiv.org/abs/1712.05877](https://arxiv.org/abs/1712.05877) *(ml-model-compression, ml-tensor-graph-inference-engine)*
+- Jacob, B., et al. "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference." *CVPR*, 2018. [arxiv.org/abs/1712.05877](https://arxiv.org/abs/1712.05877) *(ml-model-compression)*
 - Hinton, G., Vinyals, O., and Dean, J. "Distilling the Knowledge in a Neural Network." *NeurIPS Workshop*, 2015. [arxiv.org/abs/1503.02531](https://arxiv.org/abs/1503.02531) *(ml-model-compression)*
 
 **Datasets**
