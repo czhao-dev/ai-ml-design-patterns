@@ -1,4 +1,4 @@
-# Applied Machine Learning Projects
+# Applied AI/ML Projects
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -8,21 +8,21 @@ A monorepo of nine end-to-end machine learning projects spanning computer vision
 
 | Project | Area | Key Technologies | Standout |
 | --- | --- | --- | --- |
-| [ml-satellite-image-classifier](#ml-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
-| [ml-model-compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
-| [ml-tensor-graph-inference-engine](#ml-tensor-graph-inference-engine) | Inference Engines | C++17, header-only | Zero-allocation static-graph runtime; INT8 matmul; offline arena planner cuts memory ~37% |
-| [ml-llm-alignment-fine-tuning](#ml-llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
-| [ml-tiny-llm-gpt](#ml-tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
-| [ml-gcp-vertex-rag-chatbot](#ml-gcp-vertex-rag-chatbot) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
-| [ml-agentic-tool-use-bakeoff](#ml-agentic-tool-use-bakeoff) | Agentic AI / Tool Use | OpenAI API, Python | Three from-scratch agent architectures (ReAct, Plan-and-Execute, Reflexion) benchmarked on a 35-task tool-use suite; 44 tests, zero real API calls |
-| [ml-movie-recommender](#ml-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN over IMDb graphs; top-N recommendation on MovieLens |
-| [ml-boston-climate-modeler](#ml-boston-climate-modeler) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
+| [CNN-ViT Satellite Image Classifier](#cnn-vit-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
+| [ML Model Compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
+| [Tensor Graph Inference Engine](#tensor-graph-inference-engine) | Inference Engines | C++17, header-only | Zero-allocation static-graph runtime; INT8 matmul; offline arena planner cuts memory ~37% |
+| [LLM Alignment Fine-Tuning](#llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
+| [Tiny LLM GPT](#tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
+| [GenAI RAG Chatbot](#gen-ai-rag-chatbot) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
+| [Agentic AI Tool Use](#agentic-ai-tool-use) | Agentic AI / Tool Use | OpenAI API, Python | Three from-scratch agent architectures (ReAct, Plan-and-Execute, Reflexion) benchmarked on a 35-task tool-use suite; 44 tests, zero real API calls |
+| [GNN Movie Recommender](#gnn-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN over IMDb graphs; top-N recommendation on MovieLens |
+| [LSTM Transformer Climate Modeler](#lstm-transformer-climate-modeler) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
 
 ---
 
 ## Project Details
 
-### ml-satellite-image-classifier
+### CNN-ViT Satellite Image Classifier
 
 Binary classification of 64×64 satellite image tiles as agricultural vs. non-agricultural land.
 
@@ -35,7 +35,7 @@ Binary classification of 64×64 satellite image tiles as agricultural vs. non-ag
 
 ---
 
-### ml-model-compression
+### ML Model Compression
 
 Three orthogonal compression techniques — pruning, post-training quantization, and knowledge distillation — benchmarked against the PyTorch CNN and CNN-ViT models trained in `ml-satellite-image-classifier`, all scored on the same fixed held-out split for a controlled comparison.
 
@@ -48,7 +48,7 @@ Three orthogonal compression techniques — pruning, post-training quantization,
 
 ---
 
-### ml-tensor-graph-inference-engine
+### Tensor Graph Inference Engine
 
 A minimal, header-only, CPU-only static-graph neural network inference engine (in the spirit of a stripped-down ONNX Runtime or GGML): an offline compiler plans a model's entire memory layout in advance so the runtime forward pass performs zero dynamic allocation.
 
@@ -61,7 +61,7 @@ A minimal, header-only, CPU-only static-graph neural network inference engine (i
 
 ---
 
-### ml-llm-alignment-fine-tuning
+### LLM Alignment Fine-Tuning
 
 Four LLM alignment techniques implemented end-to-end, each with its own training objective and evaluation metric — all locally runnable on a laptop CPU.
 
@@ -75,7 +75,7 @@ Four LLM alignment techniques implemented end-to-end, each with its own training
 
 ---
 
-### ml-tiny-llm-gpt
+### Tiny LLM GPT
 
 A from-scratch GPT-style language model covering the complete pipeline from raw text to generated output.
 
@@ -89,7 +89,7 @@ A from-scratch GPT-style language model covering the complete pipeline from raw 
 
 ---
 
-### ml-gcp-vertex-rag-chatbot
+### GenAI RAG Chatbot
 
 A deployed RAG document Q&A app: upload a PDF, TXT, Markdown, CSV, or DOCX file and ask questions grounded in its content.
 
@@ -103,7 +103,7 @@ A deployed RAG document Q&A app: upload a PDF, TXT, Markdown, CSV, or DOCX file 
 
 ---
 
-### ml-agentic-tool-use-bakeoff
+### Agentic AI Tool Use
 
 Three agent architectures — ReAct, Plan-and-Execute, and Reflexion — implemented from scratch directly against the OpenAI Chat Completions tool-use API (no LangChain `AgentExecutor`), benchmarked head-to-head on the same hand-built 35-task suite.
 
@@ -116,7 +116,7 @@ Three agent architectures — ReAct, Plan-and-Execute, and Reflexion — impleme
 
 ---
 
-### ml-movie-recommender
+### GNN Movie Recommender
 
 Graph feature engineering pipeline extended with a heterogeneous GNN, evaluated on two separate tasks.
 
@@ -129,7 +129,7 @@ Graph feature engineering pipeline extended with a heterogeneous GNN, evaluated 
 
 ---
 
-### ml-boston-climate-modeler
+### LSTM Transformer Climate Modeler
 
 Daily weather forecasting for Reading, MA (Boston suburb) from NOAA station data — two complete pipelines in one repo: a stdlib-only Ridge baseline and a pure-TensorFlow deep learning stack.
 

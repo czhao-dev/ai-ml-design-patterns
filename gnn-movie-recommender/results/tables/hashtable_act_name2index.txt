@@ -1,0 +1,20 @@
+0	Amy Adams
+1	Ben Affleck
+2	Diane Lane
+3	Gal Gadot
+4	Henry Cavill
+5	Jenny Slate
+6	Jeremy Renner
+7	Jon Hamm
+8	Kristen Wiig
+9	Michael Keaton
+10	Rebecca Ferguson
+11	Samuel L Jackson
+12	Sandra Bullock
+13	Scarlett Johansson
+14	Simon Pegg
+15	Steve Carell
+16	Steve Coogan
+17	Tom Cruise
+18	Trey Parker
+19	Ving Rhames

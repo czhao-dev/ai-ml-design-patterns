@@ -1,0 +1,25 @@
+{
+  "num_actors": 20,
+  "num_movies": 53,
+  "num_labeled_movies": 7,
+  "num_communities": 3,
+  "genre_vocab": [
+    "Action",
+    "Animation",
+    "unknown"
+  ],
+  "demo_movies": [
+    {
+      "name": "Batman v Superman: Dawn of Justice (2016)",
+      "index": 8
+    },
+    {
+      "name": "Mission: Impossible - Rogue Nation (2015)",
+      "index": 31
+    },
+    {
+      "name": "Minions (2015)",
+      "index": 27
+    }
+  ]
+}
