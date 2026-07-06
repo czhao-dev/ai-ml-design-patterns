@@ -1,4 +1,4 @@
-# ml-tensor-graph-inference-engine
+# Tensor Graph Inference Engine
 
 > A minimal, header-only, CPU-only static-graph neural network inference engine (think: a stripped-down ONNX Runtime or GGML). An offline compiler parses a model's DAG, quantizes weights to INT8, and pre-plans a single contiguous memory arena via tensor-lifetime analysis. The header-only runtime then executes a forward pass with **zero dynamic memory allocation**.
 
