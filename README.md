@@ -8,15 +8,15 @@ A monorepo of nine end-to-end machine learning projects spanning computer vision
 
 | Project | Area | Key Technologies | Standout |
 | --- | --- | --- | --- |
-| [GenAI RAG Chatbot](#gen-ai-rag-chatbot) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
-| [Agentic AI Tool Use](#agentic-ai-tool-use) | Agentic AI / Tool Use | OpenAI API, Python | Live gpt-4.1 benchmark on 35 tasks — Reflexion 94.29% beats Plan-and-Execute 88.57% and ReAct 85.71% for $0.39 total; 44 tests, zero real API calls in CI |
-| [Churn Predictor](#churn-predictor-uplift-modeling-for-retention-targeting) | Causal Inference / Uplift Modeling | scikit-learn, EconML | Causal forest is the only model to beat random targeting (Qini +369); targeted policy cuts net losses 98.5% vs. blanket offers |
-| [Tiny LLM GPT](#tiny-llm-gpt) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
-| [LLM Alignment Fine-Tuning](#llm-alignment-fine-tuning) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
-| [CNN-ViT Satellite Image Classifier](#cnn-vit-satellite-image-classifier) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
-| [ML Model Compression](#ml-model-compression) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
-| [GNN Movie Recommender](#gnn-movie-recommender) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN benchmarked at full IMDb scale (240K movies) as well as a small sample; top-N recommendation on MovieLens |
-| [LSTM Transformer Climate Modeler](#lstm-transformer-climate-modeler) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
+| [GenAI RAG Chatbot](gen-ai-rag-chatbot/README.md) | RAG / GenAI | LangChain, Vertex AI, Chroma, Cloud Run | Document Q&A app deployed to GCP Cloud Run |
+| [Agentic AI Tool Use](agentic-ai-tool-use/README.md) | Agentic AI / Tool Use | OpenAI API, Python | Live gpt-4.1 benchmark on 35 tasks — Reflexion 94.29% beats Plan-and-Execute 88.57% and ReAct 85.71% for $0.39 total; 44 tests, zero real API calls in CI |
+| [Churn Predictor](churn-predictor/README.md) | Causal Inference / Uplift Modeling | scikit-learn, EconML | Causal forest is the only model to beat random targeting (Qini +369); targeted policy cuts net losses 98.5% vs. blanket offers |
+| [Tiny LLM GPT](tiny-llm-gpt/README.md) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
+| [LLM Alignment Fine-Tuning](llm-alignment-fine-tuning/README.md) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
+| [CNN-ViT Satellite Image Classifier](cnn-vit-satellite-image-classifier/README.md) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
+| [ML Model Compression](ml-model-compression/README.md) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
+| [GNN Movie Recommender](gnn-movie-recommender/README.md) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN benchmarked at full IMDb scale (240K movies) as well as a small sample; top-N recommendation on MovieLens |
+| [LSTM Transformer Climate Modeler](lstm-transformer-climate-modeler/README.md) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
 
 ---
 
