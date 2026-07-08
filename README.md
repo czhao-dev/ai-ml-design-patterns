@@ -22,7 +22,7 @@ A monorepo of nine end-to-end machine learning projects spanning computer vision
 
 ## Project Details
 
-### GenAI RAG Chatbot
+### [GenAI RAG Chatbot](gen-ai-rag-chatbot/README.md)
 
 A deployed RAG document Q&A app: upload a PDF, TXT, Markdown, CSV, or DOCX file and ask questions grounded in its content.
 
@@ -36,7 +36,7 @@ A deployed RAG document Q&A app: upload a PDF, TXT, Markdown, CSV, or DOCX file 
 
 ---
 
-### Agentic AI Tool Use
+### [Agentic AI Tool Use](agentic-ai-tool-use/README.md)
 
 Three agent architectures — ReAct, Plan-and-Execute, and Reflexion — implemented from scratch directly against the OpenAI Chat Completions tool-use API (no LangChain `AgentExecutor`), benchmarked head-to-head on the same hand-built 35-task suite.
 
@@ -50,7 +50,7 @@ Three agent architectures — ReAct, Plan-and-Execute, and Reflexion — impleme
 
 ---
 
-### Churn Predictor: Uplift Modeling for Retention Targeting
+### [Churn Predictor: Uplift Modeling for Retention Targeting](churn-predictor/README.md)
 
 Uplift modeling (not classification) for a retention-offer targeting decision: which customers should actually receive an offer, versus who would convert/stay anyway.
 
@@ -63,7 +63,7 @@ Uplift modeling (not classification) for a retention-offer targeting decision: w
 
 ---
 
-### Tiny LLM GPT
+### [Tiny LLM GPT](tiny-llm-gpt/README.md)
 
 A from-scratch GPT-style language model covering the complete pipeline from raw text to generated output.
 
@@ -77,7 +77,7 @@ A from-scratch GPT-style language model covering the complete pipeline from raw 
 
 ---
 
-### LLM Alignment Fine-Tuning
+### [LLM Alignment Fine-Tuning](llm-alignment-fine-tuning/README.md)
 
 Four LLM alignment techniques implemented end-to-end, each with its own training objective and evaluation metric — all locally runnable on a laptop CPU.
 
@@ -91,7 +91,7 @@ Four LLM alignment techniques implemented end-to-end, each with its own training
 
 ---
 
-### CNN-ViT Satellite Image Classifier
+### [CNN-ViT Satellite Image Classifier](cnn-vit-satellite-image-classifier/README.md)
 
 Binary classification of 64×64 satellite image tiles as agricultural vs. non-agricultural land.
 
@@ -104,7 +104,7 @@ Binary classification of 64×64 satellite image tiles as agricultural vs. non-ag
 
 ---
 
-### ML Model Compression
+### [ML Model Compression](ml-model-compression/README.md)
 
 Three orthogonal compression techniques — pruning, post-training quantization, and knowledge distillation — benchmarked against the PyTorch CNN and CNN-ViT models trained in `ml-satellite-image-classifier`, all scored on the same fixed held-out split for a controlled comparison.
 
@@ -117,7 +117,7 @@ Three orthogonal compression techniques — pruning, post-training quantization,
 
 ---
 
-### GNN Movie Recommender
+### [GNN Movie Recommender](gnn-movie-recommender/README.md)
 
 Graph feature engineering pipeline extended with a heterogeneous GNN, evaluated on two separate tasks at two different scales.
 
@@ -130,7 +130,7 @@ Graph feature engineering pipeline extended with a heterogeneous GNN, evaluated 
 
 ---
 
-### LSTM Transformer Climate Modeler
+### [LSTM Transformer Climate Modeler](lstm-transformer-climate-modeler/README.md)
 
 Daily weather forecasting for Reading, MA (Boston suburb) from NOAA station data — two complete pipelines in one repo: a stdlib-only Ridge baseline and a pure-TensorFlow deep learning stack.
 
