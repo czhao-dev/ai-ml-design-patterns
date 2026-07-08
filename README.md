@@ -17,7 +17,7 @@ The demo network is a 3-layer MLP **with a residual/skip connection** (not just 
 
 ```text
 Input (fp32, [8, 784])
-  -> quantize -> INT8 matmul + INT32 bias (784x128) -> dequantize -> ReLU  =: H1  ---------.
+  -> quantize -> INT8 matmul + INT32 bias (784x128) -> dequantize -> ReLU  =: H1  ----------.
                                                                                             |
   H1 -> quantize -> INT8 matmul + INT32 bias (128x128) -> dequantize -> ReLU -> Add <-------'
                                                                                   |
