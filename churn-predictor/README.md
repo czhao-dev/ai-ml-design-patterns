@@ -109,6 +109,13 @@ Only the causal forest beats random targeting (positive Qini coefficient). The h
 
 ![Qini curves](reports/figures/qini_curves.png)
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/qini_comparison_dark.png">
+  <img src="reports/qini_comparison_light.png" alt="Bar chart of Qini coefficient per uplift model. Baseline response model, T-learner, and X-learner are all negative (-390, -531, -249); only the causal forest is positive at +369.">
+</picture>
+
+The causal forest is the only model with a positive Qini coefficient (+369); the two hand-rolled meta-learners score below zero, meaning they rank customers by predicted uplift *worse* than a random shuffle would on this dataset.
+
 ### $ net incremental revenue by targeting policy
 
 At an assumed **$2.00 cost per offer** (representing a live retention outreach — a phone call or discount code — rather than a near-free marketing email):
@@ -121,6 +128,13 @@ At an assumed **$2.00 cost per offer** (representing a live retention outreach �
 | X-learner | -$1,128 | $960 | -$2,088 |
 | T-learner | -$1,280 | $960 | -$2,240 |
 | Blanket (target 100%) | $6,030 | $19,200 | **-$13,170** |
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/revenue_by_policy_dark.png">
+  <img src="reports/revenue_by_policy_light.png" alt="Line chart of net incremental revenue versus targeting fraction (5% to 100%) for each policy. Causal forest sits above (less negative than) every other policy at most targeting fractions, coming closest to breakeven at 5-10% targeting; the baseline response model briefly edges it out at 20-30% targeting; all policies converge to the same -$13,170 at 100% targeting since blanket targeting is policy-independent.">
+</picture>
+
+Across the full 5%-100% targeting sweep, the causal-forest curve sits above (less negative than) every other policy at most targeting fractions -- confirming the top-5% result isn't a fluke of that single cutoff -- though the baseline response model narrowly edges it out in the 20-30% targeting range. All five policies necessarily converge to the same -$13,170 at 100% targeting, since "target everyone" is policy-independent by construction.
 
 No policy is unconditionally profitable at this assumed cost — the dataset's overall average treatment effect (~$0.63/customer) is modest. But **targeting the top 5% by causal-forest-predicted uplift reduces net losses by 98.5% relative to blanket targeting** (-$198 vs. -$13,170) while still capturing $762 of real incremental revenue — 12.6% of the total achievable incremental revenue for 2.5% of the campaign cost, a >2.5x better return per dollar spent than blanketing every customer (79¢ vs. 31¢ incremental revenue per dollar spent). That comparison — not a single AUC number — is the actual business case for uplift modeling over blanket retention offers. Full sweep across targeting fractions (5%-100%) in [reports/revenue_policy_comparison.csv](reports/revenue_policy_comparison.csv).
 

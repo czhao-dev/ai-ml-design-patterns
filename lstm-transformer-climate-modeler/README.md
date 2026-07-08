@@ -83,6 +83,22 @@ pure sequence-to-sequence regression.
 > direct 1-day-ahead comparison run
 > `scripts/train_tf_models.py --horizon 1`.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/lstm_vs_transformer_rmse_dark.png">
+  <img src="reports/lstm_vs_transformer_rmse_light.png" alt="Bar chart comparing LSTM and Transformer RMSE across precipitation, snowfall, and temperature targets.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/lstm_vs_transformer_r2_dark.png">
+  <img src="reports/lstm_vs_transformer_r2_light.png" alt="Bar chart comparing LSTM and Transformer R² across precipitation, snowfall, and temperature targets.">
+</picture>
+
+Both charts are generated directly from [`reports/metrics_tf.json`](reports/metrics_tf.json)
+by [`reports/generate_plots.py`](reports/generate_plots.py) — no retraining involved. RMSE is
+nearly tied between architectures on PRCP and SNOW (both nearly zero-skill, as expected for
+sparse precipitation events), while the Transformer's temperature RMSE is about 0.8°F lower
+than the LSTM's (9.72 vs 10.54), matching the R² gap above.
+
 ### Forecast Figures
 
 ![Observed temperature forecast](reports/figures/tobs_actual_vs_predicted.svg)
@@ -159,6 +175,8 @@ ml-boston-climate-modeler/
     ├── models.json                   Serialised Ridge weights
     ├── weights_lstm.json             Serialised LSTM weights (generated)
     ├── weights_transformer.json      Serialised Transformer weights (generated)
+    ├── generate_plots.py             LSTM vs. Transformer comparison charts (from metrics_tf.json)
+    ├── lstm_vs_transformer_*.png     Generated RMSE/R² comparison charts (light + dark)
     └── figures/                      SVG charts
 ```
 

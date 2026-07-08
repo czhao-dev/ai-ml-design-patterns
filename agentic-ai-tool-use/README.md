@@ -229,6 +229,20 @@ measured cost **$0.39** across all three architectures.
 | Plan-and-Execute | 77.78% | 100.00% | 75.00% | 100.00% |
 | Reflexion | 88.89% | 100.00% | 87.50% | 100.00% |
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/success_by_category_dark.png">
+  <img src="reports/success_by_category_light.png" alt="Grouped bar chart of success rate by task category (arithmetic, code exec, error recovery, multi-hop QA) for ReAct, Plan-and-Execute, and Reflexion. All three architectures tie at 100% on code exec; Reflexion leads on arithmetic (89% vs 78%) and error recovery (88% vs 75%).">
+</picture>
+
+All three architectures hit 100% on `code_exec`, so that category doesn't discriminate between them on this task set. Reflexion's advantage is concentrated in `arithmetic` and `error_recovery` -- the two categories where its self-critique retry loop gets a second attempt at a task the other two architectures only get once.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/cost_comparison_dark.png">
+  <img src="reports/cost_comparison_light.png" alt="Bar chart of estimated benchmark cost in USD per architecture, with overall success rate annotated. Plan-and-Execute costs $0.221, roughly 2.7x ReAct's $0.082 and Reflexion's $0.087, for a lower success rate than Reflexion.">
+</picture>
+
+Reflexion reaches the highest success rate (94.29%) at almost the same cost as ReAct ($0.087 vs $0.082) -- its extra LLM calls only fire on the tasks that fail on the first attempt. Plan-and-Execute pays a fixed per-task overhead (planning + per-subtask loop + synthesis call) that costs ~2.7x more than the other two architectures without buying a higher success rate.
+
 **Finding worth flagging:** the first full run (before the numbers above) scored only
 71-74% for ReAct/Reflexion, and that gap was mostly a harness bug, not a capability
 gap. The original system prompts asked for "a direct final answer with no extra

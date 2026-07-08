@@ -155,6 +155,13 @@ GNN holdout test set (19,458 movies never seen during training): **RMSE = 1.35, 
 
 This is an honest, real result, not a bug: the full-scale linear-regression heuristic already found essentially no signal in these features (R² ≈ 0.02 across all 129,720 labeled movies, vs. R² ≈ 0.42 on the tiny, unrepresentative 7-movie sample above) — cast PageRank/degree/community/genre/structure alone just doesn't explain much of a movie's aggregate rating at real scale, and a short mini-batch GNN training run doesn't manufacture signal that isn't there. This is the direct, concrete answer to whether a larger IMDb dataset changes the picture: yes, it's now genuinely testable (unlike the 7-movie sample, where nothing could be concluded either way) — and the honest answer this run gives is that these particular graph features are still too weak, at this scale, to beat a constant-mean baseline. Plausible next steps (not attempted here): more training epochs / wider neighbor sampling, additional node features (runtime, release year, budget/revenue if available), or a fundamentally different signal (text/synopsis embeddings, e.g.).
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/imdb_full_holdout_error_dark.png">
+  <img src="reports/imdb_full_holdout_error_light.png" alt="Grouped bar chart of RMSE and MAE on the IMDb full-scale holdout test set, comparing the heterogeneous GNN against a constant global-mean baseline. GNN RMSE 1.35 and MAE 1.14 are both worse than the Global Mean baseline's RMSE 1.13 and MAE 0.88.">
+</picture>
+
+On the 19,458-movie holdout split, the GNN's RMSE (1.35) and MAE (1.14) are both *higher* (worse) than simply predicting the training-set average rating for every movie (RMSE 1.13, MAE 0.88) — a visual confirmation of the "does not beat a constant-mean baseline" finding above, not an artifact of rounding.
+
 ### MovieLens track (`ml-latest-small`: 610 users, 9,742 movies, 100K ratings)
 
 | Method | Test RMSE | Test MAE |
@@ -165,6 +172,13 @@ This is an honest, real result, not a bug: the full-scale linear-regression heur
 | Item Mean | 1.05 | 0.83 |
 
 The GNN beats every non-personalized rating baseline here — genuine signal from message-passing over the user-movie graph, not just memorization (this dataset has 100K ratings, not 7).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/movielens_rmse_mae_dark.png">
+  <img src="reports/movielens_rmse_mae_light.png" alt="Grouped bar chart of RMSE and MAE on MovieLens ml-latest-small, comparing the heterogeneous GNN against Global Mean, User Mean, and Item Mean baselines. The GNN has the lowest RMSE (0.99) and MAE (0.78) of all four methods.">
+</picture>
+
+Unlike the IMDb track, the GNN's bars are the shortest (lowest error) of the four on both metrics here — the opposite outcome from the IMDb full-scale chart above, consistent with this track having 100K real user-item ratings to learn from instead of a single aggregate label per movie.
 
 Ranking, full-catalog (not sampled negatives):
 

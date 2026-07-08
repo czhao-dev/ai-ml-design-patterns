@@ -131,6 +131,26 @@ Real run output — see [`reports/results_summary.md`](reports/results_summary.m
 
 Latency is measured as the mean of 500 single-image CPU inference calls (batch size 1, no GPU) after 50 warmup steps, using `time.perf_counter`. All measurements on Apple Silicon (arm64), CPU only.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/size_vs_accuracy_dark.png">
+  <img src="reports/size_vs_accuracy_light.png" alt="Scatter plot of model size in MB (log scale) versus accuracy, colored by compression technique, showing distillation and quantization variants near the top-left (small and accurate) and low-sparsity pruning variants collapsed near the class prior.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/pruning_accuracy_vs_sparsity_dark.png">
+  <img src="reports/pruning_accuracy_vs_sparsity_light.png" alt="Line chart of accuracy versus sparsity for unstructured and structured pruning, showing unstructured pruning holding accuracy until 80% sparsity while structured pruning collapses to the class prior by 40% sparsity.">
+</picture>
+
+Both charts are generated directly from [`reports/results.json`](reports/results.json) by
+[`reports/generate_plots.py`](reports/generate_plots.py). The size-vs-accuracy scatter makes the
+overall shape of the study legible in one view: the distillation and INT8-quantization points
+sit in the top-left (small *and* accurate), while unstructured pruning barely moves off the
+74.72 MB baseline column until it collapses at 80% sparsity, and structured pruning trades size
+for accuracy almost linearly. The sparsity line chart isolates that same pruning story — unstructured
+pruning tracks the FP32 baseline closely through 60% sparsity before falling off a cliff at 80%,
+while structured pruning starts losing accuracy immediately and hits the ~52% class-prior floor
+by 40% sparsity.
+
 **Reading the table honestly:**
 - **Unstructured pruning** holds up to 60% sparsity (accuracy barely moves) but collapses at 80% — expected, since masked-but-still-dense weights don't reduce serialized size (all four unstructured rows report the same 74.72 MB) or latency; the benefit is storage compression after a sparse-aware format, not measured here.
 - **Structured pruning** is far more aggressive: real size and latency drop immediately, but so does accuracy — by 40% sparsity the model has collapsed to predicting a single class (52.00% ≈ the class prior), exactly the "raw accuracy cliff" this project evaluates without fine-tuning recovery (see [Design Notes](#design-notes)).
@@ -159,6 +179,9 @@ ml-model-compression/
 └── reports/
     ├── results_summary.md         # Full benchmark table and commentary (generated)
     ├── results.json                # Structured results cache backing the table + figures (generated)
+    ├── generate_plots.py           # README chart generator (reads results.json only, no retraining)
+    ├── size_vs_accuracy_*.png      # Generated size-vs-accuracy scatter (light + dark)
+    ├── pruning_accuracy_vs_sparsity_*.png  # Generated pruning sparsity curve (light + dark)
     └── figures/
         ├── accuracy_vs_sparsity.png    # Pruning accuracy curve
         ├── size_vs_latency.png         # Pareto plot: size vs. latency across all variants

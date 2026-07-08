@@ -98,6 +98,20 @@ flowchart LR
 
 Each technique solves a different part of the alignment pipeline — SFT teaches format-following, reward modeling teaches preference *scoring*, PPO *optimizes* a policy against a reward signal online, and DPO reaches the same preference-optimization goal directly from chosen/rejected pairs, without a separate reward model or RL loop. The reward model and PPO results are the cleanest wins, since both have a single, well-aligned reward signal and enough training steps to act on it; SFT's BLEU regression and DPO's modest movement both reflect a genuine limitation of automatic metrics on free-form generation at this small training scale (a few hundred examples, single-digit minutes per script), not an implementation bug.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/reward_before_after_by_policy_dark.png">
+  <img src="reports/reward_before_after_by_policy_light.png" alt="Grouped bar chart of sentiment-proxy reward before and after training, for PPO positive-sentiment, PPO negative-sentiment, and DPO policies. All three move up: PPO positive 0.24 to 1.27, PPO negative -0.32 to 0.56, DPO 1.38 to 1.44.">
+</picture>
+
+DPO's proxy reward is computed with the same sentiment-classifier reward used in the PPO script, so this is a like-for-like comparison: PPO's two policies move the most in absolute terms (0.24→1.27 and -0.32→0.56, each over just 25 PPO steps) because they optimize this exact signal directly, while DPO's much smaller move (1.38→1.44) reflects that it never sees this reward during training at all — it optimizes an implicit preference objective instead, with only 300 LoRA-rank-4 examples.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/preference_accuracy_by_technique_dark.png">
+  <img src="reports/preference_accuracy_by_technique_light.png" alt="Bar chart comparing held-out pairwise preference accuracy: the reward model reaches 0.96, DPO's implicit reward reaches 0.70, both well above the 0.5 chance line.">
+</picture>
+
+Both the dedicated reward model and DPO's implicit reward are learning a real preference signal (both clear the 0.5 chance line by a wide margin), but the purpose-built reward model — trained with 800 examples on a simpler binary-classification objective — separates chosen from rejected responses much more cleanly (0.96) than DPO's implicit reward does on its own held-out pairs (0.70) at this training scale.
+
 > **Methodology note:** Three of the four source notebooks (SFT, reward modeling, PPO) have their actual training call commented out and instead download a pre-trained checkpoint to demonstrate the rest of the workflow — every script here replaces that with real local training. See [`reports/results_summary.md`](reports/results_summary.md) for the full per-technique writeup, including two PPO implementation bugs (device placement, dataset format) caught and fixed along the way.
 
 ## Repository Structure

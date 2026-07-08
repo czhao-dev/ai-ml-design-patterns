@@ -96,6 +96,20 @@ flowchart LR
 
 The PyTorch models edged out their Keras counterparts in these runs, with the PyTorch CNN-ViT hybrid reaching 99.67% held-out accuracy.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/model_metric_comparison_dark.png">
+  <img src="reports/model_metric_comparison_light.png" alt="Grouped bar chart of accuracy, precision, recall, and F1 score for all four models, y-axis zoomed to 0.97-1.005. PyTorch CNN and PyTorch CNN-ViT hybrid have the most balanced high scores; Keras CNN has the lowest recall (98.67%) despite perfect precision.">
+</picture>
+
+All four models cluster tightly between 98.7% and 100% on every metric. The clearest separation is recall: Keras CNN misses the most positives (98.67%) despite perfect precision (100%), while PyTorch CNN has perfect recall (100%) with slightly lower precision (99.65%) -- a precision/recall trade-off in opposite directions between the two frameworks' CNN baselines.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/model_loss_comparison_dark.png">
+  <img src="reports/model_loss_comparison_light.png" alt="Bar chart of validation loss per model. PyTorch CNN has the lowest loss (0.0041), followed by PyTorch CNN-ViT hybrid (0.0104) and Keras CNN (0.0257); Keras CNN-ViT hybrid has the highest loss by a wide margin (0.1138).">
+</picture>
+
+Loss tells a different story than the accuracy-family metrics: the Keras CNN-ViT hybrid has the highest validation loss (0.1138) by more than 4x the next-highest model, despite scoring within 0.4 points of accuracy of the others. Loss reflects prediction confidence, not just the final classification decision, so this model's correct predictions are apparently made with less margin than the other three.
+
 > **Methodology note:** These numbers come from evaluating each model on its held-out validation split only (1,200 images, 20% of `images_dataSAT`) — the same split reserved during training and never seen by that model's weights. See [`reports/results_summary.md`](reports/results_summary.md) for the full writeup, including how that split is reconstructed and an earlier methodology issue (full-dataset evaluation leaking training images into the metrics) that this corrects.
 
 ## Inference Server

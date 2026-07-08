@@ -137,6 +137,10 @@ ml-tiny-llm-gpt/
 ├── experiments/
 │   ├── runs/
 │   └── results/
+├── reports/
+│   ├── generate_plots.py         # README chart generator (reads train_log.jsonl, no retraining)
+│   ├── loss_curves_*.png         # Generated train/val loss comparison (light + dark)
+│   └── perplexity_curves_*.png   # Generated validation perplexity comparison (light + dark)
 └── tests/
     ├── test_model.py
     ├── test_attention.py
@@ -402,6 +406,24 @@ Final validation loss: 1.62
 Final perplexity: 5.05
 Best checkpoint: step 19500 (val_loss 1.61)
 ```
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/loss_curves_dark.png">
+  <img src="reports/loss_curves_light.png" alt="Line chart of training and validation cross-entropy loss over 20,000 steps for the Small and Medium models, both converging to a loss between 1.5 and 1.7.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/perplexity_curves_dark.png">
+  <img src="reports/perplexity_curves_light.png" alt="Line chart of validation perplexity on a log scale over 20,000 training steps for the Small and Medium models, both dropping from roughly 4300 at initialization to about 5 at the end of training.">
+</picture>
+
+Both charts are generated from the persisted `experiments/runs/{small,medium}/logs/train_log.jsonl`
+logs by [`reports/generate_plots.py`](reports/generate_plots.py) (no retraining involved; the
+Tiny run isn't plotted here because only Small and Medium have logged training history under
+`experiments/runs/`). The curves confirm what the tables above already show: Medium's validation
+loss and perplexity track consistently below Small's from roughly step 1,000 onward, and neither
+run shows the validation curve turning back upward — both are still improving, just slowly, at
+step 20,000.
 
 ## Implementation Notes
 
