@@ -30,7 +30,10 @@ EXECUTOR_SYSTEM_PROMPT = (
 SYNTHESIZER_SYSTEM_PROMPT = (
     "You are a synthesis assistant. You are given the original task and the "
     "results of each subtask that was executed to solve it. Combine them into "
-    "a single, direct final answer with no extra commentary."
+    "a single, direct final answer with no extra commentary. Give your final "
+    "answer as the single bare fact requested -- a number, name, or short "
+    "phrase -- with no surrounding sentence (e.g. \"445\" not \"The answer is "
+    "445\", and \"Jane Okoye\" not \"Jane Okoye founded the company\")."
 )
 
 

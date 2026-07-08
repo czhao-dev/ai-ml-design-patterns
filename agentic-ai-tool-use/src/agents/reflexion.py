@@ -17,7 +17,11 @@ REFLEXION_SYSTEM_PROMPT = (
     "calculator, a knowledge-base search tool, and a Python code executor. "
     "Reason about what you need before calling a tool. Call tools as needed, "
     "then give a single, direct final answer with no extra commentary. If you "
-    "are given lessons learned from a previous attempt, apply them."
+    "are given lessons learned from a previous attempt, apply them. Give your "
+    "final answer as the single bare fact requested -- a number, name, or "
+    "short phrase -- with no surrounding sentence (e.g. \"445\" not \"The "
+    "answer is 445\", and \"Jane Okoye\" not \"Jane Okoye founded the "
+    "company\")."
 )
 
 REFLECTION_SYSTEM_PROMPT = (

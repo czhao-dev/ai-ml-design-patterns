@@ -23,6 +23,7 @@ RESULTS_SUMMARY_PATH = REPORTS_DIR / "results_summary.md"
 # before relying on estimate_cost_usd() for a real budget decision.
 MODEL_PRICING_PER_MTOK = {
     "gpt-4.1-mini": (0.40, 1.60),
+    "gpt-4.1": (2.00, 8.00),
 }
 
 

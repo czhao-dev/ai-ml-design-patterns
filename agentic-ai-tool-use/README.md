@@ -13,12 +13,12 @@ execution, and injected-error recovery.
 ## Table of Contents
 
 - [Highlights](#highlights)
-- [Approach](#approach)
+- [Architecture](#architecture)
 - [Results](#results)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Design Notes](#design-notes)
-- [Future Work](#future-work)
+- [References](#references)
 - [License](#license)
 
 ## Highlights
@@ -42,8 +42,124 @@ execution, and injected-error recovery.
   conditions, tool dispatch, retry-after-failure logic) is verified against a
   hand-written fake OpenAI client -- the automated test suite costs nothing and
   runs in well under a second.
+- **Actually run against the live OpenAI API**, not just the mocked test suite --
+  see [Results](#results) for real success rates, costs, and a harness bug caught
+  only by running against a real model.
 
-## Approach
+## Architecture
+
+### System Overview
+
+```mermaid
+flowchart TB
+    subgraph Harness["Benchmark harness"]
+        Tasks["data/tasks.jsonl\n(35 tasks)"]
+        Loader["tasks.py\nload_tasks()"]
+        Runner["scripts/01-03\nrun_react / run_plan_execute / run_reflexion"]
+        Scorer["metrics.py\nscore_task()"]
+        Summary["scripts/04\nsummarize_results.py"]
+    end
+
+    subgraph AgentLayer["Agent layer (src/agents/)"]
+        Base["BaseAgent\nshared OpenAI tool-use loop"]
+        ReAct["ReActAgent"]
+        PlanExec["PlanExecuteAgent"]
+        Reflexion["ReflexionAgent"]
+    end
+
+    subgraph ToolLayer["Tool layer (src/tools/)"]
+        Registry["ToolRegistry"]
+        Calc["CalculatorTool\n(AST whitelist)"]
+        Code["CodeExecutionTool\n(sandboxed subprocess)"]
+        Retrieval["RetrievalTool\n(hand-rolled BM25)"]
+    end
+
+    KB["data/knowledge_base/\n17 synthetic documents"]
+    OpenAI["OpenAI Chat Completions API"]
+
+    Tasks --> Loader --> Runner
+    Runner --> ReAct & PlanExec & Reflexion
+    ReAct --> Base
+    PlanExec --> Base
+    Reflexion --> Base
+    Base <--> OpenAI
+    Base --> Registry
+    Registry --> Calc
+    Registry --> Code
+    Registry --> Retrieval
+    Retrieval --> KB
+    Runner --> Scorer --> Summary
+```
+
+The project is three layers wired together by the benchmark-runner scripts:
+
+- **Benchmark harness** (`scripts/`, `src/tasks.py`, `src/metrics.py`) loads
+  `data/tasks.jsonl`, runs every task through one architecture's `Agent.run()`, and
+  scores the result. `score_task()` in `src/metrics.py` is the *only* place
+  `task.expected_answer` is ever read -- neither the agents nor the tools ever see
+  ground truth, so it cannot leak into a model's context.
+- **Agent layer** (`src/agents/`) is three concrete agents (`ReActAgent`,
+  `PlanExecuteAgent`, `ReflexionAgent`), all subclassing `BaseAgent` and sharing its
+  `_run_tool_use_loop()` / `_run_notool_call()` primitives. The only thing that
+  differs between architectures is how they call these two primitives and in what
+  order -- not the underlying OpenAI plumbing.
+- **Tool layer** (`src/tools/`) is a single `ToolRegistry` instance, shared
+  identically across all three architectures, that dispatches to the calculator,
+  code executor, and retrieval tool by name. Because the registry (and every tool
+  inside it) is the same object regardless of which agent is running, the benchmark
+  measures architecture, not tool quality or tool availability.
+
+### Core Components
+
+**`BaseAgent` and the shared tool-use loop** (`src/agents/base.py`)
+`_run_tool_use_loop()` is the one piece of code that actually talks to the OpenAI
+Chat Completions API with tools bound. Each iteration: call the API with
+`tools=registry.to_openai_tools()` and `tool_choice="auto"`; if
+`finish_reason == "tool_calls"`, dispatch every call in `message.tool_calls`
+through `ToolRegistry.dispatch()`, append one `role: "tool"` message per call keyed
+by `tool_call_id`, and loop; if `finish_reason == "stop"`, capture `message.content`
+as the final answer and return. A `max_steps` bound guarantees termination even if
+the model never stops calling tools. `_run_notool_call()` is the same idea with
+`tools` omitted entirely -- used anywhere an LLM call must not be able to execute
+anything (Plan-and-Execute's planning/synthesis calls, Reflexion's self-critique
+call).
+
+**`ToolRegistry` and `CallContext`** (`src/tools/base.py`)
+`ToolRegistry` maps a tool name to a `Tool` implementing a small `Protocol`
+(`name`, `description`, a JSON-schema `parameters`, and
+`call(input, context) -> ToolResult`), and exposes `to_openai_tools()` to serialize
+the whole registry into the JSON schema list the Chat Completions API expects for
+its `tools` parameter. A `CallContext` (one per task run) is threaded through every
+tool call, which is how `FlakyToolWrapper` knows which call number it's currently
+on.
+
+**Tools** (`src/tools/`)
+- `CalculatorTool` parses the expression with `ast.parse` and walks a whitelist of
+  node types (numeric literals, `BinOp`, `UnaryOp`, and a small set of operators)
+  -- it never calls `eval()`.
+- `CodeExecutionTool` runs model-generated Python in a subprocess: a static AST
+  pre-check rejects disallowed imports/builtins before anything executes, the
+  subprocess gets a minimal environment (`PATH` only -- no `OPENAI_API_KEY`), a
+  wall-clock timeout, and (on Linux) an `RLIMIT_AS` memory cap.
+- `RetrievalTool` wraps a hand-rolled Okapi BM25 index (`BM25Index`) built over
+  `data/knowledge_base/`'s 17 synthetic documents at startup -- no embeddings, no
+  vector store.
+- `FlakyToolWrapper` (`src/tools/error_injection.py`) wraps any tool and forces its
+  Nth call to fail with a synthetic error; `apply_error_injection()`
+  (`src/tool_setup.py`) applies it as a context manager around a single task run to
+  power the error-recovery category.
+
+**Benchmark harness** (`src/tasks.py`, `src/metrics.py`, `scripts/`)
+`Task` is a frozen dataclass loaded from `data/tasks.jsonl` (prompt, expected
+answer, normalization mode, expected tools, optional error-injection spec).
+`score_task()` exact-matches the agent's final answer against `expected_answer`
+under the task's `answer_normalization` mode (`numeric`, `string_ci`, or
+`string_exact`) and computes tool-call precision/recall against `expected_tools`.
+`scripts/01-03` each run one architecture over all (or `--limit N`) tasks and save
+a `*_metrics.json`; `scripts/04_summarize_results.py` aggregates all three into
+`reports/results_summary.md` and a comparison figure.
+
+### Per-Architecture Control Flow
 
 ```mermaid
 flowchart TB
@@ -85,24 +201,58 @@ flowchart TB
   own transcript and produces "lessons learned" that are prepended to the next
   attempt's prompt.
 
-Every tool call is dispatched through a single `ToolRegistry`, so the calculator,
-code executor, and retrieval tool are identical objects across all three
-architectures -- the benchmark is measuring architecture, not tool quality.
-
 ## Results
 
 Results are generated by running `scripts/01_run_react.py` through
 `scripts/04_summarize_results.py` against a live OpenAI API key (see
 [Getting Started](#getting-started)) and are written to `reports/results_summary.md`
-and `reports/figures/architecture_comparison.png`. That file is the source of truth
-for actual numbers -- reproduce it yourself rather than trusting numbers pasted
-here, since results depend on the exact model version and are not guaranteed to be
-deterministic even at `temperature=0.0`.
+and `reports/figures/architecture_comparison.png`. **`reports/results_summary.md` is
+still the source of truth for the numbers** (re-run the pipeline yourself for a fresh
+copy, since results depend on the exact model version and are not guaranteed to be
+deterministic even at `temperature=0.0`) -- the table below is a snapshot from an
+actual run against the real OpenAI API on **2026-07-07**, model **`gpt-4.1`**
+(`OPENAI_MODEL_ID=gpt-4.1` -- the mini default is cheaper but answers were harder to
+keep terse enough for exact-match scoring at that size), full 35-task benchmark, total
+measured cost **$0.39** across all three architectures.
+
+| Architecture | Overall success | Mean LLM calls | Mean tool calls | Error recovery rate | Est. cost (USD) |
+| --- | --- | --- | --- | --- | --- |
+| ReAct | 85.71% | 2.26 | 1.26 | 75.00% | $0.0820 |
+| Plan-and-Execute | 88.57% | 6.86 | 1.83 | 75.00% | $0.2208 |
+| Reflexion | 94.29% | 2.51 | 1.29 | 87.50% | $0.0872 |
+
+**Success rate by category:**
+
+| Architecture | arithmetic | code_exec | error_recovery | multihop_qa |
+| --- | --- | --- | --- | --- |
+| ReAct | 77.78% | 100.00% | 75.00% | 88.89% |
+| Plan-and-Execute | 77.78% | 100.00% | 75.00% | 100.00% |
+| Reflexion | 88.89% | 100.00% | 87.50% | 100.00% |
+
+**Finding worth flagging:** the first full run (before the numbers above) scored only
+71-74% for ReAct/Reflexion, and that gap was mostly a harness bug, not a capability
+gap. The original system prompts asked for "a direct final answer with no extra
+commentary" but never said the answer had to be a *bare* value, so `gpt-4.1` correctly
+solving `156 + 289` and answering "156 plus 289 is 445." was scored as a failure
+against the `numeric`-mode exact-match scorer (which does a strict `float()` parse).
+`tool_precision`/`tool_recall` were 1.0 on nearly every one of these "failures" --
+the tool calls and reasoning were right, only the output format wasn't constrained
+tightly enough. All three system prompts (`src/agents/react.py`,
+`src/agents/plan_execute.py`, `src/agents/reflexion.py`) were patched to require a
+bare fact ("445" not "The answer is 445", "Jane Okoye" not "Jane Okoye founded the
+company"), and the numbers above are from the re-run after that fix. Reflexion came
+out ahead post-fix (94.29%) because its self-critique loop recovers from the handful
+of genuine reasoning/recovery misses that remain (see `reports/results_summary.md`
+for the full breakdown, including the residual unit-inclusion failures like "1200
+grams" vs the expected "1200" that the prompt fix didn't fully eliminate). Plan-and-
+Execute is ~2.7x more expensive than the other two (6.86 mean LLM calls vs ~2.3-2.5)
+because every task pays for a planning call, a per-subtask loop, and a synthesis
+call even for single-step arithmetic.
 
 ## Repository Structure
 
 ```text
-ml-agentic-tool-use-bakeoff/
+agentic-ai-tool-use/
 ├── README.md
 ├── requirements.txt
 ├── .env.example
@@ -147,7 +297,7 @@ ml-agentic-tool-use-bakeoff/
 ### Setup
 
 ```bash
-cd ml-agentic-tool-use-bakeoff
+cd agentic-ai-tool-use
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -172,12 +322,18 @@ python scripts/01_run_react.py --limit 3
 python scripts/02_run_plan_execute.py --limit 3
 python scripts/03_run_reflexion.py --limit 3
 
-# Full run (all 35 tasks, ~gpt-4.1-mini at current pricing costs a few dollars at most)
+# Full run (all 35 tasks; a few dollars at most, well under $1 with gpt-4.1-mini
+# or gpt-4.1 at current pricing -- see Results above for actual measured cost)
 python scripts/01_run_react.py
 python scripts/02_run_plan_execute.py
 python scripts/03_run_reflexion.py
 python scripts/04_summarize_results.py
 ```
+
+If you run scripts concurrently against the same OpenAI org, watch for
+`RateLimitError` on tokens-per-minute -- lower-tier accounts can have a TPM limit
+(e.g. 30,000) that two scripts running in parallel against `gpt-4.1` can exceed;
+run them sequentially if that happens.
 
 ### Watching one task run step by step
 
@@ -193,7 +349,10 @@ generated, and the retry recover.
 
 - **Model:** defaults to `gpt-4.1-mini` (env-configurable via `OPENAI_MODEL_ID`)
   -- cheap enough ($0.40 / $1.60 per 1M input/output tokens) to use for both
-  development and the final reported numbers, no dev/prod model split needed.
+  development and the final reported numbers, no dev/prod model split needed. The
+  [Results](#results) run above used `gpt-4.1` ($2.00 / $8.00 per 1M input/output
+  tokens) instead, since larger models were easier to keep terse enough for
+  exact-match scoring.
 - **Code execution sandboxing is explicitly scoped.** The threat model (see
   `src/tools/code_exec.py`) is accidental/hallucinated destructive behavior from
   a fixed, self-authored task set -- not a defense against a determined
@@ -210,17 +369,35 @@ generated, and the retry recover.
   only place `task.expected_answer` is read; the Reflexion agent's self-critique
   prompt is built solely from the failed attempt's own transcript, verified by a
   dedicated regression test (`test_reflection_prompt_never_contains_expected_answer`).
+- **Exact-match scoring requires the model's output format to be constrained, not
+  just its tool use.** The [Results](#results) section documents a real instance of
+  this: system prompts that didn't specify "bare value, no sentence" cost 15-20
+  points of measured success rate against otherwise-correct answers.
 
-## Future Work
+## References
 
-- Compare BM25 retrieval against a local embedding-based retriever on the same
-  multi-hop QA tasks.
-- Add a second model (larger or smaller) to separate architecture effects from
-  model-capability effects.
-- Expand the error-recovery category to inject failures on the 2nd/3rd call to
-  a tool, not just the 1st, to test sustained recovery rather than a single retry.
-- A Berkeley Function-Calling-Leaderboard-style single-call precision benchmark
-  as a complement to this project's multi-step focus.
+Papers and resources that directly informed the architectures and tools
+implemented here.
+
+- Yao, S., et al. "ReAct: Synergizing Reasoning and Acting in Language Models."
+  *ICLR*, 2023. [arxiv.org/abs/2210.03629](https://arxiv.org/abs/2210.03629) --
+  the interleaved reasoning/acting loop implemented in `src/agents/react.py`.
+- Wang, L., et al. "Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought
+  Reasoning by Large Language Models." *ACL*, 2023.
+  [arxiv.org/abs/2305.04091](https://arxiv.org/abs/2305.04091) -- the
+  planning/execution/synthesis split implemented in `src/agents/plan_execute.py`.
+- Shinn, N., et al. "Reflexion: Language Agents with Verbal Reinforcement
+  Learning." *NeurIPS*, 2023.
+  [arxiv.org/abs/2303.11366](https://arxiv.org/abs/2303.11366) -- the bounded
+  retry + self-critique loop implemented in `src/agents/reflexion.py`.
+- Robertson, S., and Zaragoza, H. "The Probabilistic Relevance Framework: BM25
+  and Beyond." *Foundations and Trends in Information Retrieval*, 2009.
+  [doi.org/10.1561/1500000019](https://doi.org/10.1561/1500000019) -- the ranking
+  function behind `RetrievalTool`'s hand-rolled `BM25Index`.
+- OpenAI. Function calling / tool-use guide for the Chat Completions API.
+  [platform.openai.com/docs/guides/function-calling](https://platform.openai.com/docs/guides/function-calling)
+  -- the `tools` / `tool_choice` / `finish_reason == "tool_calls"` contract every
+  agent here is built directly against.
 
 ## License
 

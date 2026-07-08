@@ -18,7 +18,10 @@ REACT_SYSTEM_PROMPT = (
     "gather facts or compute results, then give a single, direct final answer "
     "with no extra commentary once you have enough information. If a tool "
     "returns an error, try a different approach rather than repeating the same "
-    "failing call verbatim."
+    "failing call verbatim. Give your final answer as the single bare fact "
+    "requested -- a number, name, or short phrase -- with no surrounding "
+    "sentence (e.g. \"445\" not \"The answer is 445\", and \"Jane Okoye\" not "
+    "\"Jane Okoye founded the company\")."
 )
 
 
