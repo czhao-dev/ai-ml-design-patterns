@@ -13,9 +13,9 @@ execution, and injected-error recovery.
 ## Table of Contents
 
 - [Highlights](#highlights)
+- [Repository Structure](#repository-structure)
 - [Architecture](#architecture)
 - [Results](#results)
-- [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Design Notes](#design-notes)
 - [References](#references)
@@ -45,6 +45,42 @@ execution, and injected-error recovery.
 - **Actually run against the live OpenAI API**, not just the mocked test suite --
   see [Results](#results) for real success rates, costs, and a harness bug caught
   only by running against a real model.
+
+## Repository Structure
+
+```text
+agentic-ai-tool-use/
+├── README.md
+├── requirements.txt
+├── .env.example
+├── src/
+│   ├── config.py                 # Settings dataclass, paths, pricing table
+│   ├── tasks.py                  # Task dataclass + loader
+│   ├── metrics.py                # scoring + save_metrics/load_metrics
+│   ├── tool_setup.py             # shared ToolRegistry + error-injection context manager
+│   ├── tools/
+│   │   ├── base.py               # Tool protocol, ToolResult, ToolRegistry, CallContext
+│   │   ├── calculator.py         # AST-whitelist arithmetic (no eval())
+│   │   ├── code_exec.py          # sandboxed subprocess Python execution
+│   │   ├── retrieval.py          # hand-rolled BM25 over data/knowledge_base/
+│   │   └── error_injection.py    # FlakyToolWrapper for error-recovery tasks
+│   └── agents/
+│       ├── base.py               # shared OpenAI tool-use loop
+│       ├── react.py
+│       ├── plan_execute.py
+│       └── reflexion.py
+├── data/
+│   ├── tasks.jsonl                # 35 task definitions
+│   └── knowledge_base/            # 17 synthetic documents + manifest.json
+├── scripts/
+│   ├── 01_run_react.py
+│   ├── 02_run_plan_execute.py
+│   ├── 03_run_reflexion.py
+│   ├── 04_summarize_results.py    # aggregates + writes results_summary.md + figure
+│   └── demo_single_task.py        # interactive single-task/architecture transcript
+├── reports/                       # generated: *_metrics.json, results_summary.md, figures/
+└── tests/                         # 44 tests, all mocked, zero API cost
+```
 
 ## Architecture
 
@@ -262,42 +298,6 @@ grams" vs the expected "1200" that the prompt fix didn't fully eliminate). Plan-
 Execute is ~2.7x more expensive than the other two (6.86 mean LLM calls vs ~2.3-2.5)
 because every task pays for a planning call, a per-subtask loop, and a synthesis
 call even for single-step arithmetic.
-
-## Repository Structure
-
-```text
-agentic-ai-tool-use/
-├── README.md
-├── requirements.txt
-├── .env.example
-├── src/
-│   ├── config.py                 # Settings dataclass, paths, pricing table
-│   ├── tasks.py                  # Task dataclass + loader
-│   ├── metrics.py                # scoring + save_metrics/load_metrics
-│   ├── tool_setup.py              # shared ToolRegistry + error-injection context manager
-│   ├── tools/
-│   │   ├── base.py               # Tool protocol, ToolResult, ToolRegistry, CallContext
-│   │   ├── calculator.py         # AST-whitelist arithmetic (no eval())
-│   │   ├── code_exec.py          # sandboxed subprocess Python execution
-│   │   ├── retrieval.py          # hand-rolled BM25 over data/knowledge_base/
-│   │   └── error_injection.py    # FlakyToolWrapper for error-recovery tasks
-│   └── agents/
-│       ├── base.py               # shared OpenAI tool-use loop
-│       ├── react.py
-│       ├── plan_execute.py
-│       └── reflexion.py
-├── data/
-│   ├── tasks.jsonl                # 35 task definitions
-│   └── knowledge_base/            # 17 synthetic documents + manifest.json
-├── scripts/
-│   ├── 01_run_react.py
-│   ├── 02_run_plan_execute.py
-│   ├── 03_run_reflexion.py
-│   ├── 04_summarize_results.py    # aggregates + writes results_summary.md + figure
-│   └── demo_single_task.py        # interactive single-task/architecture transcript
-├── reports/                       # generated: *_metrics.json, results_summary.md, figures/
-└── tests/                         # 44 tests, all mocked, zero API cost
-```
 
 ## Getting Started
 

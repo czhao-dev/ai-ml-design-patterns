@@ -41,6 +41,47 @@ TensorFlow ops.
 - Exploratory Jupyter notebook with loss curves, attention heatmaps, and model comparison
 - 56/56 unit tests across data, models, sequence windowing, and TF primitives
 
+## Repository Layout
+
+```text
+ml-boston-climate-modeler/
+├── 962598.csv                        Legacy NOAA export (Reading MA US, 2012–2017)
+├── 4344212.csv                       NOAA GHCN-D export (Reading MA US, 1960–2019)
+├── src/climate_modeling/
+│   ├── data.py                       CSV loading, cleaning, train/test split
+│   ├── features.py                   Lag + seasonal features for Ridge pipeline
+│   ├── models.py                     RidgeRegressor + SeasonalNaiveModel (stdlib)
+│   ├── metrics.py                    MAE, RMSE, R²
+│   ├── train.py                      Ridge training CLI
+│   ├── visualize.py                  SVG chart generation
+│   ├── sequence_dataset.py           Sliding-window builder + SequenceScaler
+│   ├── tf_cells.py                   LSTMCell · LayerNorm · MultiHeadAttention
+│   │                                 FeedForward · AdamOptimizer  (pure TF)
+│   ├── tf_models.py                  LSTMForecaster · TransformerForecaster
+│   └── tf_trainer.py                 GradientTape loop · evaluate · save/load weights
+├── scripts/
+│   ├── train_model.py                Ridge training entrypoint
+│   └── train_tf_models.py            LSTM + Transformer training entrypoint
+├── notebooks/
+│   └── climate_exploration.ipynb     EDA · loss curves · attention heatmaps
+├── tests/
+│   ├── test_data.py                  Data loading & cleaning (5 tests)
+│   ├── test_models.py                Ridge & baseline (10 tests)
+│   ├── test_pipeline.py              Feature construction & splits (4 tests)
+│   ├── test_visualize.py             SVG generation (3 tests)
+│   ├── test_sequence_dataset.py      Windowing & scaler (10 tests)
+│   └── test_tf_models.py             TF primitives & models (24 tests)
+└── reports/
+    ├── metrics.json                  Ridge results
+    ├── metrics_tf.json               Deep learning results (generated)
+    ├── models.json                   Serialised Ridge weights
+    ├── weights_lstm.json             Serialised LSTM weights (generated)
+    ├── weights_transformer.json      Serialised Transformer weights (generated)
+    ├── generate_plots.py             LSTM vs. Transformer comparison charts (from metrics_tf.json)
+    ├── lstm_vs_transformer_*.png     Generated RMSE/R² comparison charts (light + dark)
+    └── figures/                      SVG charts
+```
+
 ## Results
 
 ### Ridge Regression (v0.1 — 1-day-ahead, 2016 test)
@@ -137,47 +178,6 @@ flowchart TD
     E --> F["Serialised Model\nreports/models.json"]
     F --> G["One-Day-Ahead Forecast"]
     G --> H["Evaluation vs seasonal baseline\nreports/metrics.json"]
-```
-
-## Repository Layout
-
-```text
-ml-boston-climate-modeler/
-├── 962598.csv                        Legacy NOAA export (Reading MA US, 2012–2017)
-├── 4344212.csv                       NOAA GHCN-D export (Reading MA US, 1960–2019)
-├── src/climate_modeling/
-│   ├── data.py                       CSV loading, cleaning, train/test split
-│   ├── features.py                   Lag + seasonal features for Ridge pipeline
-│   ├── models.py                     RidgeRegressor + SeasonalNaiveModel (stdlib)
-│   ├── metrics.py                    MAE, RMSE, R²
-│   ├── train.py                      Ridge training CLI
-│   ├── visualize.py                  SVG chart generation
-│   ├── sequence_dataset.py           Sliding-window builder + SequenceScaler
-│   ├── tf_cells.py                   LSTMCell · LayerNorm · MultiHeadAttention
-│   │                                 FeedForward · AdamOptimizer  (pure TF)
-│   ├── tf_models.py                  LSTMForecaster · TransformerForecaster
-│   └── tf_trainer.py                 GradientTape loop · evaluate · save/load weights
-├── scripts/
-│   ├── train_model.py                Ridge training entrypoint
-│   └── train_tf_models.py            LSTM + Transformer training entrypoint
-├── notebooks/
-│   └── climate_exploration.ipynb     EDA · loss curves · attention heatmaps
-├── tests/
-│   ├── test_data.py                  Data loading & cleaning (5 tests)
-│   ├── test_models.py                Ridge & baseline (10 tests)
-│   ├── test_pipeline.py              Feature construction & splits (4 tests)
-│   ├── test_visualize.py             SVG generation (3 tests)
-│   ├── test_sequence_dataset.py      Windowing & scaler (10 tests)
-│   └── test_tf_models.py             TF primitives & models (24 tests)
-└── reports/
-    ├── metrics.json                  Ridge results
-    ├── metrics_tf.json               Deep learning results (generated)
-    ├── models.json                   Serialised Ridge weights
-    ├── weights_lstm.json             Serialised LSTM weights (generated)
-    ├── weights_transformer.json      Serialised Transformer weights (generated)
-    ├── generate_plots.py             LSTM vs. Transformer comparison charts (from metrics_tf.json)
-    ├── lstm_vs_transformer_*.png     Generated RMSE/R² comparison charts (light + dark)
-    └── figures/                      SVG charts
 ```
 
 ## Reproduce

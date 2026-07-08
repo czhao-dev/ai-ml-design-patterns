@@ -11,13 +11,13 @@ The goal is to answer a concrete engineering question: _for a fixed accuracy bud
 ## Table of Contents
 
 - [Highlights](#highlights)
+- [Repository Structure](#repository-structure)
 - [Background](#background)
 - [Techniques](#techniques)
   - [Pruning](#pruning)
   - [Post-Training Quantization](#post-training-quantization)
   - [Knowledge Distillation](#knowledge-distillation)
 - [Benchmark Results](#benchmark-results)
-- [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Design Notes](#design-notes)
 - [Future Work](#future-work)
@@ -32,6 +32,37 @@ The goal is to answer a concrete engineering question: _for a fixed accuracy bud
 - Knowledge distillation: PyTorch CNN-ViT (99.67% accuracy, teacher) → lightweight 3-block student CNN, trained with a temperature-scaled soft-label loss; student is ~150× smaller than the teacher (measured: 1.0 MB vs. 150.95 MB FP32)
 - Unified benchmark table: every model variant is scored on accuracy, F1, model size (MB), CPU inference latency (ms/image), and throughput (images/s)
 - Compressed models are drop-in replacements for the inference server in `ml-satellite-image-classifier/serve/` — `ModelRegistry` requires no changes
+
+## Repository Structure
+
+```text
+ml-model-compression/
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── scripts/
+│   ├── 01_pruning.py              # Magnitude and structured pruning sweep
+│   ├── 02_quantization.py         # Static and dynamic INT8 PTQ
+│   └── 03_distillation.py         # Teacher–student knowledge distillation
+├── src/
+│   ├── __init__.py
+│   ├── student_model.py           # StudentCNN architecture definition
+│   ├── benchmark.py               # Latency/throughput measurement + results cache/figures
+│   ├── eval_utils.py              # Canonical split, checkpoint loading, accuracy/F1 evaluation
+│   └── paths.py                   # Shared path constants (points into satellite classifier)
+├── models/
+│   └── trained/                   # gitignored — pruned/quantized/student checkpoints
+└── reports/
+    ├── results_summary.md                  # Full benchmark table and commentary (generated)
+    ├── results.json                        # Structured results cache backing the table + figures (generated)
+    ├── generate_plots.py                   # README chart generator (reads results.json only, no retraining)
+    ├── size_vs_accuracy_*.png              # Generated size-vs-accuracy scatter (light + dark)
+    ├── pruning_accuracy_vs_sparsity_*.png  # Generated pruning sparsity curve (light + dark)
+    └── figures/
+        ├── accuracy_vs_sparsity.png    # Pruning accuracy curve
+        ├── size_vs_latency.png         # Pareto plot: size vs. latency across all variants
+        └── distillation_curves.png     # Train/val loss for student and baseline
+```
 
 ## Background
 
@@ -156,37 +187,6 @@ by 40% sparsity.
 - **Structured pruning** is far more aggressive: real size and latency drop immediately, but so does accuracy — by 40% sparsity the model has collapsed to predicting a single class (52.00% ≈ the class prior), exactly the "raw accuracy cliff" this project evaluates without fine-tuning recovery (see [Design Notes](#design-notes)).
 - **Quantization** is the best accuracy/compression tradeoff in this table: static INT8 PTQ on the CNN cuts size 4× and latency ~1.8× with no measurable accuracy loss; dynamic PTQ on the CNN-ViT's linear layers is more modest (only the Transformer's `nn.Linear` layers are touched, not the CNN backbone or patch-embed conv) but still meaningfully smaller and faster than FP32.
 - **Distillation** produces the smallest, fastest models by a wide margin (~150× smaller than the CNN-ViT teacher, sub-millisecond latency) — but on this dataset the hard-label-only baseline student matches or slightly exceeds the distilled student's accuracy. The task is easy enough for a 3-block CNN that the teacher's soft labels don't add measurable signal here; the distilled student's real advantage is smoother, more stable training (see `reports/figures/distillation_curves.png` — the baseline dips to 79% val accuracy at epoch 5, the distilled run never does).
-
-## Repository Structure
-
-```text
-ml-model-compression/
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── scripts/
-│   ├── 01_pruning.py              # Magnitude and structured pruning sweep
-│   ├── 02_quantization.py         # Static and dynamic INT8 PTQ
-│   └── 03_distillation.py         # Teacher–student knowledge distillation
-├── src/
-│   ├── __init__.py
-│   ├── student_model.py           # StudentCNN architecture definition
-│   ├── benchmark.py               # Latency/throughput measurement + results cache/figures
-│   ├── eval_utils.py              # Canonical split, checkpoint loading, accuracy/F1 evaluation
-│   └── paths.py                   # Shared path constants (points into satellite classifier)
-├── models/
-│   └── trained/                   # gitignored — pruned/quantized/student checkpoints
-└── reports/
-    ├── results_summary.md         # Full benchmark table and commentary (generated)
-    ├── results.json                # Structured results cache backing the table + figures (generated)
-    ├── generate_plots.py           # README chart generator (reads results.json only, no retraining)
-    ├── size_vs_accuracy_*.png      # Generated size-vs-accuracy scatter (light + dark)
-    ├── pruning_accuracy_vs_sparsity_*.png  # Generated pruning sparsity curve (light + dark)
-    └── figures/
-        ├── accuracy_vs_sparsity.png    # Pruning accuracy curve
-        ├── size_vs_latency.png         # Pareto plot: size vs. latency across all variants
-        └── distillation_curves.png     # Train/val loss for student and baseline
-```
 
 ## Getting Started
 

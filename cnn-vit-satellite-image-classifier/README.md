@@ -12,11 +12,11 @@ Binary classification of satellite image tiles as **agricultural** or **non-agri
 ## Table of Contents
 
 - [Highlights](#highlights)
+- [Repository Structure](#repository-structure)
 - [Dataset](#dataset)
 - [Approach](#approach)
 - [Results](#results)
 - [Inference Server](#inference-server)
-- [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Project Background](#project-background)
 - [Future Work](#future-work)
@@ -29,6 +29,49 @@ Binary classification of satellite image tiles as **agricultural** or **non-agri
 - Cross-framework evaluation using accuracy, precision, recall, F1, ROC-AUC, loss, and confusion matrices
 - Held-out validation methodology: an earlier version of this project scored models against the full training set; the evaluation pipeline was corrected to score only each model's untouched validation split (see [Results](#results))
 - FastAPI inference server serving all four models via a `?model=` query parameter, with Docker Compose for one-command deployment
+
+## Repository Structure
+
+```text
+.
+├── data/
+│   └── data.md
+├── models/
+│   └── models.md
+├── reports/
+│   ├── figures/
+│   └── results_summary.md
+├── scripts/
+│   ├── 01_data_loading_memory_vs_generator.py
+│   ├── 02_keras_data_pipeline.py
+│   ├── 03_pytorch_data_pipeline.py
+│   ├── 04_keras_cnn_classifier.py
+│   ├── 05_pytorch_cnn_classifier.py
+│   ├── 06_keras_vs_pytorch_cnn_comparison.py
+│   ├── 07_keras_cnn_vit_hybrid.py
+│   ├── 08_pytorch_cnn_vit_hybrid.py
+│   └── 09_final_cnn_vit_evaluation.py
+├── serve/
+│   ├── app.py                  # FastAPI application
+│   ├── model_registry.py       # Model loading and caching
+│   ├── pytorch_models.py       # PyTorch model class definitions
+│   ├── keras_custom_layers.py  # Custom Keras layers (auto-registers on import)
+│   ├── preprocessing.py        # Per-backend image preprocessing
+│   ├── schemas.py              # Pydantic request/response types
+│   ├── Dockerfile
+│   └── requirements.txt
+├── src/
+│   ├── config.py
+│   ├── data_utils.py
+│   ├── metrics.py
+│   └── visualization.py
+├── docker-compose.yml
+├── LICENSE
+├── README.md
+└── requirements.txt
+```
+
+`scripts/` contains the full project workflow as self-contained Python source files, numbered in execution order from data loading through final model evaluation — see [`scripts/README.md`](scripts/README.md) for what each one does. `src/` holds small reusable helpers (paths, metrics, plotting) factored out for future reuse.
 
 ## Dataset
 
@@ -154,49 +197,6 @@ curl -X POST "http://localhost:8000/predict?model=pytorch_vit" \
   "latency_ms": 18.42
 }
 ```
-
-## Repository Structure
-
-```text
-.
-├── data/
-│   └── data.md
-├── models/
-│   └── models.md
-├── reports/
-│   ├── figures/
-│   └── results_summary.md
-├── scripts/
-│   ├── 01_data_loading_memory_vs_generator.py
-│   ├── 02_keras_data_pipeline.py
-│   ├── 03_pytorch_data_pipeline.py
-│   ├── 04_keras_cnn_classifier.py
-│   ├── 05_pytorch_cnn_classifier.py
-│   ├── 06_keras_vs_pytorch_cnn_comparison.py
-│   ├── 07_keras_cnn_vit_hybrid.py
-│   ├── 08_pytorch_cnn_vit_hybrid.py
-│   └── 09_final_cnn_vit_evaluation.py
-├── serve/
-│   ├── app.py                  # FastAPI application
-│   ├── model_registry.py       # Model loading and caching
-│   ├── pytorch_models.py       # PyTorch model class definitions
-│   ├── keras_custom_layers.py  # Custom Keras layers (auto-registers on import)
-│   ├── preprocessing.py        # Per-backend image preprocessing
-│   ├── schemas.py              # Pydantic request/response types
-│   ├── Dockerfile
-│   └── requirements.txt
-├── src/
-│   ├── config.py
-│   ├── data_utils.py
-│   ├── metrics.py
-│   └── visualization.py
-├── docker-compose.yml
-├── LICENSE
-├── README.md
-└── requirements.txt
-```
-
-`scripts/` contains the full project workflow as self-contained Python source files, numbered in execution order from data loading through final model evaluation — see [`scripts/README.md`](scripts/README.md) for what each one does. `src/` holds small reusable helpers (paths, metrics, plotting) factored out for future reuse.
 
 ## Getting Started
 

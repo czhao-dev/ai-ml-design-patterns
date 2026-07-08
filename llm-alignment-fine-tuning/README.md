@@ -10,10 +10,10 @@ Four complementary techniques for aligning a language model with a target behavi
 ## Table of Contents
 
 - [Highlights](#highlights)
+- [Repository Structure](#repository-structure)
 - [Dataset](#dataset)
 - [Approach](#approach)
 - [Results](#results)
-- [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Project Background](#project-background)
 - [Future Work](#future-work)
@@ -26,6 +26,34 @@ Four complementary techniques for aligning a language model with a target behavi
 - PPO-based RLHF on `gpt2-imdb`, steering two separate policies toward positive and negative sentiment (mean reward 0.24→1.27 and -0.32→0.56 respectively) using a sentiment-classifier reward
 - Direct Preference Optimization (DPO) on GPT-2, reaching **0.70 reward accuracy** on held-out preference pairs
 - All four scripts replace the source notebooks' commented-out training calls / downloaded pre-trained checkpoints with real, locally-runnable training — every number above comes from an actual training run on this project's dev machine, not a downloaded artifact (see [Project Background](#project-background))
+
+## Repository Structure
+
+```text
+.
+├── data/
+│   └── data.md
+├── models/
+│   └── models.md
+├── reports/
+│   ├── figures/
+│   └── results_summary.md
+├── scripts/
+│   ├── 01_instruction_fine_tuning.py
+│   ├── 02_reward_modeling.py
+│   ├── 03_ppo_rlhf.py
+│   ├── 04_dpo_fine_tuning.py
+│   └── 05_summarize_results.py
+├── src/
+│   ├── config.py
+│   ├── data_utils.py
+│   ├── metrics.py
+│   └── visualization.py
+├── README.md
+└── requirements.txt
+```
+
+`scripts/` contains the full project workflow as self-contained Python source files, numbered in execution order — see [`scripts/README.md`](scripts/README.md) for what each one does and why. `src/` holds small reusable helpers (paths/constants, dataset formatting, metrics, plotting) shared across scripts.
 
 ## Dataset
 
@@ -113,34 +141,6 @@ DPO's proxy reward is computed with the same sentiment-classifier reward used in
 Both the dedicated reward model and DPO's implicit reward are learning a real preference signal (both clear the 0.5 chance line by a wide margin), but the purpose-built reward model — trained with 800 examples on a simpler binary-classification objective — separates chosen from rejected responses much more cleanly (0.96) than DPO's implicit reward does on its own held-out pairs (0.70) at this training scale.
 
 > **Methodology note:** Three of the four source notebooks (SFT, reward modeling, PPO) have their actual training call commented out and instead download a pre-trained checkpoint to demonstrate the rest of the workflow — every script here replaces that with real local training. See [`reports/results_summary.md`](reports/results_summary.md) for the full per-technique writeup, including two PPO implementation bugs (device placement, dataset format) caught and fixed along the way.
-
-## Repository Structure
-
-```text
-.
-├── data/
-│   └── data.md
-├── models/
-│   └── models.md
-├── reports/
-│   ├── figures/
-│   └── results_summary.md
-├── scripts/
-│   ├── 01_instruction_fine_tuning.py
-│   ├── 02_reward_modeling.py
-│   ├── 03_ppo_rlhf.py
-│   ├── 04_dpo_fine_tuning.py
-│   └── 05_summarize_results.py
-├── src/
-│   ├── config.py
-│   ├── data_utils.py
-│   ├── metrics.py
-│   └── visualization.py
-├── README.md
-└── requirements.txt
-```
-
-`scripts/` contains the full project workflow as self-contained Python source files, numbered in execution order — see [`scripts/README.md`](scripts/README.md) for what each one does and why. `src/` holds small reusable helpers (paths/constants, dataset formatting, metrics, plotting) shared across scripts.
 
 ## Getting Started
 

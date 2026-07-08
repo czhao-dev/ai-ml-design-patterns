@@ -22,8 +22,8 @@ This is not intended to compete with production LLMs. Instead, it is a hands-on 
 ## Contents
 
 * [Features](#features)
-* [High-Level Architecture](#high-level-architecture)
 * [Repository Structure](#repository-structure)
+* [High-Level Architecture](#high-level-architecture)
 * [Model Variants](#model-variants)
 * [Installation](#installation)
 * [Dataset](#dataset)
@@ -55,6 +55,51 @@ This is not intended to compete with production LLMs. Instead, it is a hands-on 
 * Training loss logging
 * Throughput and memory benchmarking
 * Reproducible experiment configuration
+
+## Repository Structure
+
+```text
+ml-tiny-llm-gpt/
+├── README.md
+├── requirements.txt
+├── configs/
+│   ├── tiny.yaml
+│   ├── small.yaml
+│   └── medium.yaml
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── tokenizer/
+├── tinyllm/
+│   ├── __init__.py
+│   ├── model.py
+│   ├── attention.py
+│   ├── transformer.py
+│   ├── tokenizer.py
+│   ├── dataset.py
+│   ├── generation.py
+│   └── utils.py
+├── scripts/
+│   ├── download_tinystories.py
+│   ├── train_tokenizer.py
+│   ├── prepare_dataset.py
+│   ├── train.py
+│   ├── generate.py
+│   ├── evaluate.py
+│   ├── benchmark.py
+│   └── plot_loss.py
+├── experiments/
+│   ├── runs/
+│   └── results/
+├── reports/
+│   ├── generate_plots.py         # README chart generator (reads train_log.jsonl, no retraining)
+│   ├── loss_curves_*.png         # Generated train/val loss comparison (light + dark)
+│   └── perplexity_curves_*.png   # Generated validation perplexity comparison (light + dark)
+└── tests/
+    ├── test_model.py
+    ├── test_attention.py
+    └── test_tokenizer.py
+```
 
 ## High-Level Architecture
 
@@ -100,51 +145,6 @@ Language Modeling Head
    |
    v
 Next-token Logits
-```
-
-## Repository Structure
-
-```text
-ml-tiny-llm-gpt/
-├── README.md
-├── requirements.txt
-├── configs/
-│   ├── tiny.yaml
-│   ├── small.yaml
-│   └── medium.yaml
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── tokenizer/
-├── tinyllm/
-│   ├── __init__.py
-│   ├── model.py
-│   ├── attention.py
-│   ├── transformer.py
-│   ├── tokenizer.py
-│   ├── dataset.py
-│   ├── generation.py
-│   └── utils.py
-├── scripts/
-│   ├── download_tinystories.py
-│   ├── train_tokenizer.py
-│   ├── prepare_dataset.py
-│   ├── train.py
-│   ├── generate.py
-│   ├── evaluate.py
-│   ├── benchmark.py
-│   └── plot_loss.py
-├── experiments/
-│   ├── runs/
-│   └── results/
-├── reports/
-│   ├── generate_plots.py         # README chart generator (reads train_log.jsonl, no retraining)
-│   ├── loss_curves_*.png         # Generated train/val loss comparison (light + dark)
-│   └── perplexity_curves_*.png   # Generated validation perplexity comparison (light + dark)
-└── tests/
-    ├── test_model.py
-    ├── test_attention.py
-    └── test_tokenizer.py
 ```
 
 ## Model Variants
