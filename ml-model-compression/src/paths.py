@@ -1,6 +1,6 @@
 """Shared path constants and sibling-project imports.
 
-ml-model-compression is a sibling directory of ml-satellite-image-classifier
+ml-model-compression is a sibling directory of cnn-vit-satellite-image-classifier
 under the same applied-ml-projects working tree (both live in the same git
 repo as plain subdirectories, not separate installed packages). Both projects
 happen to name their local package `src`, so a plain `sys.path` insert would
@@ -25,12 +25,12 @@ MODELS_DIR = PROJECT_ROOT / "models"
 TRAINED_MODELS_DIR = MODELS_DIR / "trained"  # gitignored — compressed checkpoints
 
 # --- Sibling project location --------------------------------------------
-SIBLING_PROJECT_ROOT = (PROJECT_ROOT.parent / "ml-satellite-image-classifier").resolve()
+SIBLING_PROJECT_ROOT = (PROJECT_ROOT.parent / "cnn-vit-satellite-image-classifier").resolve()
 
 if not SIBLING_PROJECT_ROOT.is_dir():
     raise FileNotFoundError(
         f"Expected sibling project at {SIBLING_PROJECT_ROOT}; "
-        "ml-model-compression assumes it sits alongside ml-satellite-image-classifier."
+        "ml-model-compression assumes it sits alongside cnn-vit-satellite-image-classifier."
     )
 
 
