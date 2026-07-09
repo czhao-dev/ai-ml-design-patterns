@@ -171,6 +171,8 @@ python scripts/05_summarize_results.py   # after 01-04 have each run at least on
 
 Scripts 01–04 are independent of each other and can run in any order; each takes roughly 2–25 minutes on a laptop CPU (reward modeling and PPO are the slowest, at ~25 and ~5 minutes respectively).
 
+Tests: `pytest tests/` (covers config, data formatting, metrics, and plotting; functions that hit the Hugging Face Hub or download datasets are out of scope for these offline unit tests)
+
 ## Project Background
 
 This project began as four IBM Skills Network course labs covering instruction fine-tuning, reward modeling, PPO-based RLHF, and DPO. It has since been reorganized into a clear Python workflow with documented results and reusable helper modules. The most significant change: three of the four source notebooks never actually executed their training step (`trainer.train()` / `ppo_trainer.step()` were commented out in favor of downloading a pre-trained checkpoint, since the notebooks targeted IBM's time-limited CPU sandbox). This project's scripts run real, scaled-down local training for all four techniques instead — every metric reported above comes from an actual training run, not a downloaded artifact. The DPO lab's main body was the one exception (already written to train for real, just never executed end-to-end); its GPU-only, never-exercised 4-bit quantization cell was dropped, and its "Exercises" section's compare-before-after generation pattern was generalized into a reusable helper rather than duplicated on a second dataset. See [`scripts/README.md`](scripts/README.md) and [`reports/results_summary.md`](reports/results_summary.md) for full details.
