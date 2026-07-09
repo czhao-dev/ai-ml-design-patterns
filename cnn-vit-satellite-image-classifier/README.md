@@ -224,6 +224,8 @@ python ../../scripts/04_keras_cnn_classifier.py
 
 Scripts are numbered in the order they were developed; `06` and `09` are the cross-framework comparison/evaluation steps and expect the corresponding training scripts' outputs to exist first.
 
+Tests: `pip install -r serve/requirements.txt pytest && pytest tests/`
+
 ## Project Background
 
 This project began as an IBM/Coursera deep learning capstone sequence. It has since been reorganized into a clear Python workflow with documented results, reusable helper modules, and proper handling of large data and model artifacts — including catching and fixing a data-leakage bug in the original evaluation methodology (see [Results](#results)).
