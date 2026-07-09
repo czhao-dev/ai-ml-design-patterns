@@ -227,6 +227,8 @@ python scripts/03_distillation.py
 
 Each script upserts its rows into `reports/results.json` (a small structured cache, keyed by variant name) and regenerates `reports/results_summary.md` plus the relevant figures from the full accumulated set — so `size_vs_latency.png` stays a complete cross-technique Pareto plot no matter which scripts have been run so far, while each script remains independently runnable.
 
+Tests: `pytest tests/` (covers the student model, path wiring, and benchmarking helpers; functions needing the downloaded dataset or the sibling project's gitignored checkpoints are out of scope for these offline unit tests)
+
 ### requirements.txt
 
 ```
