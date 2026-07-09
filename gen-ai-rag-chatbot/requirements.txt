@@ -23,3 +23,4 @@ requests==2.32.3
 sentence-transformers==3.0.1
 starlette==0.38.6
 unstructured==0.14.8
+pytest>=7.4

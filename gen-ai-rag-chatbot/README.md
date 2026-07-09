@@ -123,6 +123,8 @@ python3 -m app.main
 
 Open the local Gradio URL shown in the terminal, upload a document, and ask a question.
 
+Tests: `pytest tests/` (covers config, document loading/chunking, and UI wiring; Vertex AI calls need live GCP credentials and are out of scope for these offline unit tests)
+
 ## Configuration
 
 The app is configured through environment variables:
