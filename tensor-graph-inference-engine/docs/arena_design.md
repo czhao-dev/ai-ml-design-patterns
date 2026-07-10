@@ -1,6 +1,6 @@
 # Arena Design Notes
 
-This document is the deep-dive companion to the README's summary of the static memory planner in `include/tge/arena_planner.hpp`. It covers the full algorithm and a hand-traced worked example against the actual demo topology.
+This document is the deep-dive companion to the README's summary of the static memory planner in `src/arena_planner.py`. It covers the full algorithm and a hand-traced worked example against the actual demo topology.
 
 ## Why lifetimes, not just a bump allocator
 
@@ -69,7 +69,7 @@ function plan_arena(lifetimes, alignment):
     return ArenaPlan{assignments, align_up(high_water, alignment)}
 ```
 
-Correctness properties this must satisfy (and that `tests/test_arena_planner.cpp` checks directly):
+Correctness properties this must satisfy (and that `tests/test_arena_planner.py` checks directly):
 
 1. Two tensors with strictly disjoint lifetimes and equal size get the **same offset** (reuse happened).
 2. Two tensors with overlapping lifetimes get **non-intersecting** byte ranges — never aliased.
@@ -78,11 +78,11 @@ Correctness properties this must satisfy (and that `tests/test_arena_planner.cpp
 
 ## Weights blob (not planned)
 
-`Weight`/`Bias` tensors don't participate in the interval allocator at all: `model_format.hpp`'s `write_artifact()` places them with a trivial sequential bump-allocator (respecting alignment) into a separate region of the compiled file, once, at compile time. They're read-only for the lifetime of the `Engine` and never reused, so there's nothing to plan — planning only matters for tensors whose lifetimes actually end.
+`Weight`/`Bias` tensors don't participate in the interval allocator at all: `model_format.py`'s `write_artifact()` places them with a trivial sequential bump-allocator (respecting alignment) into a separate region of the compiled file, once, at compile time. They're read-only for the lifetime of the `Engine` and never reused, so there's nothing to plan — planning only matters for tensors whose lifetimes actually end.
 
 ## Worked example: the demo graph
 
-The demo topology (`include/tge/demo_graph.hpp`) is a 3-layer MLP with a residual connection, `batch=8, input_dim=784, hidden_dim=128, output_dim=10`. Its 14 nodes produce these activation/input/output tensors (weights/biases excluded — they live in the separate blob):
+The demo topology (`src/demo_graph.py`) is a 3-layer MLP with a residual connection, `batch=8, input_dim=784, hidden_dim=128, output_dim=10`. Its 14 nodes produce these activation/input/output tensors (weights/biases excluded — they live in the separate blob):
 
 | tensor | dtype | shape | bytes | start | end | pinned |
 |---|---|---|---|---|---|---|
@@ -104,9 +104,9 @@ The demo topology (`include/tge/demo_graph.hpp`) is a 3-layer MLP with a residua
 
 `H1`'s lifetime `[3, 8]` spans the *entire second layer* (nodes 4–7: quantize, matmul, dequantize, relu) — it's produced right after the first ReLU and not consumed until the residual `Add` five nodes later. Meanwhile `Xq`, `H1_acc`, and `H1_pre` (all already dead by node 3/4) are legitimate candidates for reuse by `H1q`, `H2_acc`, `H2_pre`.
 
-Running the algorithm above (measured directly, via `Engine::arena_size_bytes()` — see `tests/test_arena_planner.cpp` and `tests/test_end_to_end.cpp` for the regression-pinned assertions):
+Running the algorithm above (measured directly, via `Engine.arena_size_bytes` — see `tests/test_arena_planner.py` and `tests/test_end_to_end.py` for the regression-pinned assertions):
 
 - **Naive sum** of all 15 tensors above: **63,072 bytes**.
 - **Planned arena size: 39,904 bytes** — a ~37% reduction, achieved while `H1`'s 4,096-byte block sits untouched through the entire second layer's computation, and the pinned `X`/`Probs`/`Preds` tensors (25,440 bytes combined) are never touched by anything else.
 
-If you change the topology or the allocator and this number moves, that's expected — update the regression-pinned constants in `tests/test_arena_planner.cpp` and `tests/test_end_to_end.cpp` (and this document) to match the newly-measured value, rather than loosening the assertions.
+If you change the topology or the allocator and this number moves, that's expected — update the regression-pinned constants in `tests/test_arena_planner.py` and `tests/test_end_to_end.py` (and this document) to match the newly-measured value, rather than loosening the assertions.
