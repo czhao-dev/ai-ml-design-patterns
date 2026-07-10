@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A monorepo of nine end-to-end machine learning projects spanning computer vision, large language models, agentic AI and tool use, graph learning, time-series forecasting, model compression, production inference serving, and causal inference. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
+A monorepo of ten end-to-end machine learning projects spanning computer vision, large language models, agentic AI and tool use, graph learning, time-series forecasting, model compression, production inference serving, causal inference, and systems-level ML inference engineering. Each project lives in its own subdirectory with independent dependencies, tests, documented results, and a full README.
 
 ## Projects at a Glance
 
@@ -17,6 +17,7 @@ A monorepo of nine end-to-end machine learning projects spanning computer vision
 | [ML Model Compression](ml-model-compression/README.md) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
 | [GNN Movie Recommender](gnn-movie-recommender/README.md) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN benchmarked at full IMDb scale (240K movies) as well as a small sample; top-N recommendation on MovieLens |
 | [LSTM Transformer Climate Modeler](lstm-transformer-climate-modeler/README.md) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
+| [Tensor Graph Inference Engine](tensor-graph-inference-engine/README.md) | Systems / Inference Engine | Python, NumPy | Static-graph INT8 engine with a hand-rolled greedy arena planner cutting activation memory ~37% (39,904 vs. 63,072 bytes), fully regression-pinned |
 
 ---
 
@@ -142,6 +143,20 @@ Daily weather forecasting for Reading, MA (Boston suburb) from NOAA station data
 - **Testing:** 56 unit tests across data cleaning, feature engineering, sequence windowing, scaler round-trips, TF primitive shapes, and weight serialisation.
 
 **Stack:** Python · TensorFlow 2.14+ (`tf.Module` / `tf.Variable` / `tf.GradientTape`) · NumPy · Jupyter · Matplotlib
+
+---
+
+### [Tensor Graph Inference Engine](tensor-graph-inference-engine/README.md)
+
+A from-scratch, static-graph INT8 neural-network inference engine: an offline compiler that quantizes and memory-plans a fixed demo topology, and a minimal runtime that executes it via pre-planned buffer views with no additional allocation.
+
+- **Static graph + INT8 quantization:** builds a DAG for a 3-layer MLP with a residual/skip connection (14 nodes, 21 tensors), quantizing weights and activations to per-tensor symmetric INT8 (scale = max(abs)/127, zero_point = 0).
+- **Greedy arena memory planner:** a first-fit interval/lifetime allocator packs all activation tensors into a single pre-sized arena — 39,904 bytes versus a naive 63,072-byte allocation (~37% reduction), regression-pinned in the test suite.
+- **Zero-allocation-spirit runtime:** the engine performs exactly two allocations at load time (file buffer + arena buffer); `forward()` writes results directly into pre-planned buffer views (NumPy basic slices reinterpreted via `.view(dtype)`) rather than allocating per step.
+- **Full regression coverage:** pytest suite pins exact tensor/node counts and arena byte size, verifies quantization round-trip error bounds, and validates end-to-end prediction agreement against an fp32 reference implementation.
+- **Originally built in C++** (header-only, CPU-only) as a systems exercise, then fully migrated to a pure-Python/NumPy implementation preserving the identical binary artifact format, algorithm, and regression-pinned constants.
+
+**Stack:** Python · NumPy · pytest
 
 ---
 

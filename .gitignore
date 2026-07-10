@@ -14,3 +14,6 @@ gnn-movie-recommender/data/movielens/
 gnn-movie-recommender/data/full/
 gnn-movie-recommender/data/full_raw/
 gnn-movie-recommender/experiments/
+
+# tensor-graph-inference-engine-specific
+tensor-graph-inference-engine/models/
