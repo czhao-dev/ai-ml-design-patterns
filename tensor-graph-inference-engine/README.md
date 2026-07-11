@@ -1,5 +1,9 @@
 # Tensor Graph Inference Engine
 
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![NumPy](https://img.shields.io/badge/NumPy-INT8%20inference-013243?logo=numpy&logoColor=white)](https://numpy.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 > A minimal, CPU-only static-graph neural network inference engine (think: a stripped-down ONNX Runtime or GGML). An offline compiler parses a model's DAG, quantizes weights to INT8, and pre-plans a single contiguous memory arena via tensor-lifetime analysis. The runtime then executes a forward pass touching only that pre-planned memory, writing every intermediate result into a pre-existing view rather than allocating a fresh array per step.
 
 Originally built in C++ (header-only, zero-allocation via `operator new`/`delete` overrides), then fully migrated to Python/NumPy — same algorithm, same byte-exact binary artifact format, same regression-pinned constants.
@@ -34,7 +38,7 @@ Input (fp32, [8, 784])
 
 ```text
 .
-├── requirements.txt                # numpy + pytest, nothing else
+├── requirements.txt                # numpy + pytest + matplotlib (plotting only)
 ├── src/
 │   ├── types.py                    # DType/TensorKind/OpType, alignment helpers
 │   ├── ops.py                      # quantize/dequantize, INT8 matmul, relu, add, softmax, argmax
@@ -46,7 +50,11 @@ Input (fp32, [8, 784])
 │   └── demo_graph.py                # the concrete demo topology (shared by scripts + tests)
 ├── scripts/
 │   ├── 01_compile_model.py         # offline compiler CLI
-│   └── 02_infer.py                 # inference CLI runner
+│   ├── 02_infer.py                 # inference CLI runner
+│   └── 03_benchmark.py             # INT8 vs. fp32 latency/throughput benchmark
+├── reports/
+│   ├── benchmark_results.csv       # persisted output of 03_benchmark.py
+│   └── generate_plots.py           # renders reports/*.png from the CSV (no retraining/rerun)
 ├── tests/                          # op-level, arena-planner, model-format, end-to-end, zero-alloc tests
 └── docs/arena_design.md            # full pseudocode + worked example for the planner
 ```
@@ -113,8 +121,50 @@ pytest
 - **`test_end_to_end.py`** — the full INT8 demo graph vs. the fp32 reference forward pass over the same weights/input, bounded probability error, prediction agreement.
 - **`test_zero_alloc.py`** — a Python reinterpretation of the original C++ `operator new`/`delete`-override test: asserts the arena's identity/pointer never changes across repeated `forward()` calls, that outputs are views sharing memory with the arena (`np.shares_memory`), and that repeated calls don't grow Python-tracked memory by anything close to a tensor's worth of bytes. CPython/NumPy can't literally intercept `malloc` the way C++ can, so this tests the properties that actually capture the design intent rather than a literal zero-byte guarantee.
 
+## Benchmarks
+
+Does the compiled, zero-allocation INT8 engine actually run faster than a naive fp32 NumPy forward pass over the same tiny model? `scripts/03_benchmark.py` answers that directly: it times `Engine.forward()` against `fp32_reference.run_fp32_reference()` on identical weights and input, across a batch-size sweep, with a warmup phase and 500 timed iterations per point.
+
+```bash
+python scripts/03_benchmark.py --output reports/benchmark_results.csv
+python reports/generate_plots.py
+```
+
+**Hardware:** GCP Compute Engine `e2-standard-4` (4 vCPU, Intel Xeon @ 2.20GHz, 16GB RAM), `us-central1-a`, Debian 12, Python 3.11.2 — chosen for a clean, reproducible, non-burstable CPU baseline rather than a laptop number. Every result below was reproduced by a second full run on the same VM, agreeing within ~1-8%.
+
+| Batch | Engine | Mean Latency (ms) | P99 Latency (ms) | Throughput (rows/s) |
+| ---: | :--- | ---: | ---: | ---: |
+| 4 | INT8 | 1.21 | 1.54 | 3,309 |
+| 4 | fp32 | 0.12 | 0.19 | 33,657 |
+| 8 | INT8 | 1.80 | 2.18 | 4,455 |
+| 8 | fp32 | 0.19 | 0.41 | 41,261 |
+| 32 | INT8 | 5.25 | 6.02 | 6,091 |
+| 32 | fp32 | 0.31 | 0.47 | 103,399 |
+| 128 | INT8 | 20.70 | 22.65 | 6,183 |
+| 128 | fp32 | 0.68 | 1.10 | 187,617 |
+| 512 | INT8 | 74.04 | 82.21 | 6,915 |
+| 512 | fp32 | 2.16 | 3.03 | 237,082 |
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/throughput_vs_batch_dark.png">
+  <img src="reports/throughput_vs_batch_light.png" alt="Log-log line chart of inference throughput in rows per second versus batch size for the INT8 engine and the fp32 reference. The fp32 line rises from about 34,000 to 237,000 rows per second while the INT8 line stays far below it, rising only from about 3,300 to 6,900 rows per second.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/latency_vs_batch_dark.png">
+  <img src="reports/latency_vs_batch_light.png" alt="Log-log line chart of mean latency per call in milliseconds versus batch size for the INT8 engine and the fp32 reference. The INT8 line is consistently far above the fp32 line, reaching about 74 milliseconds at batch 512 versus about 2 milliseconds for fp32.">
+</picture>
+
+**The honest result: on this CPU/NumPy implementation, the INT8 engine is 28-38x slower than the naive fp32 baseline at every batch size tested, and the gap widens as batch grows.** Two things compound:
+
+- `op_matmul_int8` (`src/ops.py`) is a plain `activation.astype(np.int32) @ weight.astype(np.int32)`. NumPy has no standard vectorized integer GEMM path the way it does for `float32 @ float32` (which dispatches into OpenBLAS/MKL's SIMD-tiled kernels) — so the INT8 matmul almost certainly falls back to a much slower generic loop, even though it's doing less *conceptual* work (8-bit operands vs. 32-bit floats).
+- `Engine.forward()` walks a 14-node Python-level dispatch loop (`_run_node`'s `if/elif` chain) on every call, adding fixed per-call overhead that `run_fp32_reference()`'s much shorter, branch-free call sequence doesn't pay. This overhead is roughly constant per call, which is why the fp32 baseline's throughput scales up substantially with batch size (BLAS gets more efficient on larger matmuls) while the INT8 engine's throughput barely moves — the dispatch loop, not the arithmetic, dominates at every size tested here.
+
+Neither result should be surprising in hindsight, and neither undermines the project's actual claim: the zero-allocation arena (see [Static Memory Arena](#static-memory-arena)) is about *deterministic, allocation-free memory behavior* for embedded/real-time deployment, not raw FLOP/s — a fp32 baseline that allocates a fresh array on every call is a legitimately different tradeoff, not a strictly better one, even though it wins on this metric. Closing the throughput gap would require a real vectorized INT8 kernel (what the original C++ implementation's cache-blocked scalar GEMM was reaching for — see [Quantization Scheme](#quantization-scheme)), which NumPy doesn't provide out of the box; see [Possible Extensions](#possible-extensions).
+
 ## Possible Extensions
 
+- A vectorized/BLAS-backed INT8 GEMM kernel — `op_matmul_int8` doesn't hit an accelerated path the way NumPy's `float32 @` operator does (see [Benchmarks](#benchmarks)); closing that gap is a prerequisite before the zero-allocation design could also compete on raw throughput, not just on predictable memory behavior.
 - Per-channel (rather than per-tensor) weight quantization for better accuracy at low bit-width.
 - A general topological sort in `GraphBuilder`, rather than relying on construction order (fine for a hand-built demo graph; would matter for a graph assembled from an arbitrary op list).
 - Best-fit or slab-class allocation strategies in the arena planner instead of first-fit, to reduce fragmentation on larger/more irregular graphs.
@@ -124,3 +174,7 @@ pytest
 
 - Jacob, B., et al. "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference." *CVPR*, 2018. [arxiv.org/abs/1712.05877](https://arxiv.org/abs/1712.05877)
 - [Arena design notes](docs/arena_design.md)
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
