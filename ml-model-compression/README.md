@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../LICENSE)
 
-A focused study in production-oriented model compression applied to the four trained models from [`ml-satellite-image-classifier`](../ml-satellite-image-classifier). The project benchmarks three orthogonal compression families — **magnitude and structured pruning**, **post-training quantization (PTQ)**, and **knowledge distillation** — measuring the tradeoff between model size, inference latency, and classification accuracy on a held-out satellite image test set.
+A focused study in production-oriented model compression applied to the four trained models from [`cnn-vit-satellite-image-classifier`](../cnn-vit-satellite-image-classifier). The project benchmarks three orthogonal compression families — **magnitude and structured pruning**, **post-training quantization (PTQ)**, and **knowledge distillation** — measuring the tradeoff between model size, inference latency, and classification accuracy on a held-out satellite image test set.
 
 The goal is to answer a concrete engineering question: _for a fixed accuracy budget, what is the smallest, fastest model we can ship?_
 
@@ -29,9 +29,9 @@ The goal is to answer a concrete engineering question: _for a fixed accuracy bud
 - Three compression techniques applied to the same base architecture and dataset, enabling a controlled, apples-to-apples benchmark
 - Unstructured magnitude pruning and structured L1 channel pruning sweeping sparsity from 20% to 80%; structured pruning produces real latency gains without sparse BLAS support
 - Static INT8 quantization via `torch.ao.quantization` (observer calibration on 200 training images) and dynamic INT8 for the ViT's linear layers
-- Knowledge distillation: PyTorch CNN-ViT (99.67% accuracy, teacher) → lightweight 3-block student CNN, trained with a temperature-scaled soft-label loss; student is ~150× smaller than the teacher (measured: 1.0 MB vs. 150.95 MB FP32)
+- Knowledge distillation: PyTorch CNN-ViT (97.58% accuracy on this project's canonical split, teacher) → lightweight 3-block student CNN, trained with a temperature-scaled soft-label loss; student is ~150× smaller than the teacher (measured: 1.0 MB vs. 150.95 MB FP32)
 - Unified benchmark table: every model variant is scored on accuracy, F1, model size (MB), CPU inference latency (ms/image), and throughput (images/s)
-- Compressed models are drop-in replacements for the inference server in `ml-satellite-image-classifier/serve/` — `ModelRegistry` requires no changes
+- Compressed models are drop-in replacements for the inference server in `cnn-vit-satellite-image-classifier/serve/` — `ModelRegistry` requires no changes
 
 ## Repository Structure
 
@@ -66,18 +66,18 @@ ml-model-compression/
 
 ## Background
 
-`ml-satellite-image-classifier` trains and evaluates four models for binary land-use classification (agricultural vs. non-agricultural, 64×64 satellite tiles):
+`cnn-vit-satellite-image-classifier` trains and evaluates four models for binary land-use classification (agricultural vs. non-agricultural, 64×64 satellite tiles):
 
 | Model | Accuracy | F1 | Size (FP32) |
 |---|---:|---:|---:|
-| PyTorch CNN | 99.83% | 0.9983 | ~34 MB |
-| PyTorch CNN-ViT | 99.67% | 0.9967 | ~90 MB |
-| Keras CNN | 99.33% | 0.9933 | ~35 MB |
-| Keras CNN-ViT | 99.42% | 0.9942 | ~91 MB |
+| PyTorch CNN | 99.92% | 0.9991 | ~74.7 MB |
+| PyTorch CNN-ViT | 97.50% | 0.9756 | ~151.0 MB |
+| Keras CNN | 99.25% | 0.9924 | ~233.0 MB |
+| Keras CNN-ViT | 99.17% | 0.9916 | ~1796.5 MB |
 
 The PyTorch models are used as compression targets throughout this project. Keras models are included in the benchmark table for reference but are not the focus of the compression scripts.
 
-The dataset, data pipeline, and evaluation split are identical to the parent project: 6,000 JPG satellite tiles (3,000 per class), evaluated on a fixed 1,200-image held-out validation split that no model saw during training. The trained FP32 weights (`models/trained/*.pth`) are loaded from `ml-satellite-image-classifier/models/trained/` via a relative path; see [Getting Started](#getting-started).
+The dataset, data pipeline, and evaluation split are identical to the parent project: 6,000 JPG satellite tiles (3,000 per class), evaluated on a fixed 1,200-image held-out validation split that no model saw during training. The trained FP32 weights (`models/trained/*.pth`) are loaded from `cnn-vit-satellite-image-classifier/models/trained/` via a relative path; see [Getting Started](#getting-started).
 
 ## Techniques
 
@@ -123,7 +123,7 @@ No fine-tuning or quantization-aware training (QAT) is applied. PTQ-only results
 
 Knowledge distillation trains a smaller **student** network to match the output distribution of a larger, pre-trained **teacher**, rather than training from hard (one-hot) labels alone. The teacher's soft probability vectors carry more information than a binary ground-truth label — they encode the model's uncertainty across classes and serve as a richer training signal for the student.
 
-**Teacher:** PyTorch CNN-ViT (99.67% accuracy per the source project; 99.83% measured on this project's canonical split, ~151 MB FP32 measured). The teacher is frozen throughout distillation; only the student's weights are updated.
+**Teacher:** PyTorch CNN-ViT (97.50% accuracy per the source project's own SEED=7331 split; 97.58% measured on this project's canonical SEED=42 split, ~151 MB FP32 measured). The teacher is frozen throughout distillation; only the student's weights are updated.
 
 **Student:** A lightweight 3-block CNN (`StudentCNN`), roughly following the first three blocks of the satellite CNN backbone (32 → 64 → 128 channels), followed by global average pooling and a two-class head. ~259K parameters (~1.0 MB FP32) — measured at ~150× fewer parameters than the CNN-ViT teacher, well beyond a rough "order of magnitude smaller" framing.
 
@@ -135,7 +135,7 @@ L = α · CE(student_logits, hard_labels) + (1 - α) · T² · KL(softmax(studen
 
 where `T` is the temperature (default 4.0) and `α` balances the hard-label cross-entropy against the soft-label KL divergence (default 0.3). Higher temperature softens the teacher's distribution, exposing more inter-class similarity signal. The `T²` factor is the standard Hinton et al. (2015) correction: temperature-softened KL gradients shrink by ~1/T², so multiplying back by `T²` keeps the soft-loss gradient magnitude comparable to the hard-label loss across different temperature settings.
 
-Training runs on the 4,800-image training split (the same split used in `ml-satellite-image-classifier`) for 30 epochs with Adam and cosine learning-rate decay. The best checkpoint by validation accuracy is saved.
+Training runs on the 4,800-image training split (the same split used in `cnn-vit-satellite-image-classifier`) for 30 epochs with Adam and cosine learning-rate decay. The best checkpoint by validation accuracy is saved.
 
 A **baseline student** (same `StudentCNN` architecture, trained from scratch on hard labels only) is included as a control to isolate the distillation benefit.
 
@@ -145,22 +145,22 @@ Real run output — see [`reports/results_summary.md`](reports/results_summary.m
 
 | Model | Compression | Accuracy | F1 | Size (MB) | Latency (ms/img) | Throughput (img/s) |
 |---|---|---:|---:|---:|---:|---:|
-| PyTorch CNN (FP32 baseline) | — | 99.92% | 0.9991 | 74.72 | 4.074 | 245.5 |
-| PyTorch CNN-ViT (FP32 baseline) | — | 99.83% | 0.9983 | 150.95 | 8.814 | 113.5 |
-| PyTorch CNN — pruned 20% (unstructured) | Pruning | 99.92% | 0.9991 | 74.72 | 4.143 | 241.3 |
-| PyTorch CNN — pruned 40% (unstructured) | Pruning | 99.83% | 0.9983 | 74.72 | 4.226 | 236.6 |
-| PyTorch CNN — pruned 60% (unstructured) | Pruning | 99.08% | 0.9904 | 74.72 | 4.116 | 242.9 |
-| PyTorch CNN — pruned 80% (unstructured) | Pruning | 55.25% | 0.1268 | 74.72 | 4.121 | 242.7 |
-| PyTorch CNN — pruned 20% (structured) | Pruning | 77.67% | 0.6968 | 49.16 | 3.146 | 317.9 |
-| PyTorch CNN — pruned 40% (structured) | Pruning | 52.00% | 0.0000 | 28.86 | 2.126 | 470.3 |
-| PyTorch CNN — pruned 60% (structured) | Pruning | 52.00% | 0.0000 | 13.96 | 1.039 | 962.3 |
-| PyTorch CNN — pruned 80% (structured) | Pruning | 52.00% | 0.0000 | 4.34 | 0.506 | 1974.9 |
-| PyTorch CNN — INT8 static PTQ | Quantization | 100.00% | 1.0000 | 18.76 | 2.234 | 447.6 |
-| PyTorch CNN-ViT — INT8 dynamic PTQ | Quantization | 99.83% | 0.9983 | 90.21 | 5.656 | 176.8 |
-| StudentCNN (hard labels only) | Distillation | 100.00% | 1.0000 | 1.00 | 0.612 | 1633.9 |
-| StudentCNN (distilled from CNN-ViT) | Distillation | 99.92% | 0.9991 | 1.00 | 0.591 | 1691.6 |
+| PyTorch CNN (FP32 baseline) | — | 99.92% | 0.9991 | 74.72 | 28.586 | 35.0 |
+| PyTorch CNN-ViT (FP32 baseline) | — | 97.58% | 0.9754 | 150.95 | 17.999 | 55.6 |
+| PyTorch CNN — pruned 20% (unstructured) | Pruning | 99.92% | 0.9991 | 74.72 | 28.020 | 35.7 |
+| PyTorch CNN — pruned 40% (unstructured) | Pruning | 100.00% | 1.0000 | 74.72 | 28.125 | 35.6 |
+| PyTorch CNN — pruned 60% (unstructured) | Pruning | 99.92% | 0.9991 | 74.72 | 28.341 | 35.3 |
+| PyTorch CNN — pruned 80% (unstructured) | Pruning | 94.25% | 0.9363 | 74.72 | 12.921 | 77.4 |
+| PyTorch CNN — pruned 20% (structured) | Pruning | 97.58% | 0.9744 | 49.16 | 19.646 | 50.9 |
+| PyTorch CNN — pruned 40% (structured) | Pruning | 53.42% | 0.0573 | 28.86 | 6.653 | 150.3 |
+| PyTorch CNN — pruned 60% (structured) | Pruning | 52.00% | 0.0000 | 13.96 | 3.774 | 265.0 |
+| PyTorch CNN — pruned 80% (structured) | Pruning | 52.00% | 0.0000 | 4.34 | 2.124 | 470.9 |
+| PyTorch CNN — INT8 static PTQ | Quantization | 99.92% | 0.9991 | 18.83 | 3.295 | 303.5 |
+| PyTorch CNN-ViT — INT8 dynamic PTQ | Quantization | 97.50% | 0.9746 | 90.21 | 31.137 | 32.1 |
+| StudentCNN (hard labels only) | Distillation | 99.92% | 0.9991 | 1.00 | 2.548 | 392.5 |
+| StudentCNN (distilled from CNN-ViT) | Distillation | 99.17% | 0.9914 | 1.00 | 2.555 | 391.5 |
 
-Latency is measured as the mean of 500 single-image CPU inference calls (batch size 1, no GPU) after 50 warmup steps, using `time.perf_counter`. All measurements on Apple Silicon (arm64), CPU only.
+Latency is measured as the mean of 500 single-image CPU inference calls (batch size 1, no GPU) after 50 warmup steps, using `time.perf_counter`. All measurements on a GCP `c2-standard-4` VM (Intel Xeon, x86_64), CPU only — a hardware change from the project's earlier Apple Silicon (arm64) run, so absolute latency/throughput numbers are not comparable across runs; the relative story across compression variants (which is what this project is actually studying) still holds.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="reports/size_vs_accuracy_dark.png">
@@ -183,23 +183,23 @@ while structured pruning starts losing accuracy immediately and hits the ~52% cl
 by 40% sparsity.
 
 **Reading the table honestly:**
-- **Unstructured pruning** holds up to 60% sparsity (accuracy barely moves) but collapses at 80% — expected, since masked-but-still-dense weights don't reduce serialized size (all four unstructured rows report the same 74.72 MB) or latency; the benefit is storage compression after a sparse-aware format, not measured here.
-- **Structured pruning** is far more aggressive: real size and latency drop immediately, but so does accuracy — by 40% sparsity the model has collapsed to predicting a single class (52.00% ≈ the class prior), exactly the "raw accuracy cliff" this project evaluates without fine-tuning recovery (see [Design Notes](#design-notes)).
-- **Quantization** is the best accuracy/compression tradeoff in this table: static INT8 PTQ on the CNN cuts size 4× and latency ~1.8× with no measurable accuracy loss; dynamic PTQ on the CNN-ViT's linear layers is more modest (only the Transformer's `nn.Linear` layers are touched, not the CNN backbone or patch-embed conv) but still meaningfully smaller and faster than FP32.
-- **Distillation** produces the smallest, fastest models by a wide margin (~150× smaller than the CNN-ViT teacher, sub-millisecond latency) — but on this dataset the hard-label-only baseline student matches or slightly exceeds the distilled student's accuracy. The task is easy enough for a 3-block CNN that the teacher's soft labels don't add measurable signal here; the distilled student's real advantage is smoother, more stable training (see `reports/figures/distillation_curves.png` — the baseline dips to 79% val accuracy at epoch 5, the distilled run never does).
+- **Unstructured pruning** holds up to 60% sparsity (accuracy barely moves, even ticking up to 100% at 40% by noise on a 1,200-image split) but collapses at 80% (94.25%) — expected, since masked-but-still-dense weights don't reduce serialized size (all four unstructured rows report the same 74.72 MB) or latency; the benefit is storage compression after a sparse-aware format, not measured here.
+- **Structured pruning** is far more aggressive: real size and latency drop immediately, but so does accuracy — by 40% sparsity the model has already collapsed to near the class prior (53.42% accuracy, F1 0.0573), exactly the "raw accuracy cliff" this project evaluates without fine-tuning recovery (see [Design Notes](#design-notes)).
+- **Quantization** is a mixed picture once genuinely re-measured on this hardware: static INT8 PTQ on the CNN is the clear winner, cutting size ~4× and latency ~8.7× (28.586ms → 3.295ms) with no measurable accuracy loss. Dynamic PTQ on the CNN-ViT's linear layers cuts size meaningfully (150.95MB → 90.21MB, ~1.7×) but was measured *slower* than FP32 here (17.999ms → 31.137ms) — only the Transformer's `nn.Linear` layers are touched, and on this CPU the per-call quantize/dequantize overhead outweighs the saved matmul cost at batch size 1. That's a genuinely useful negative result: dynamic PTQ's latency benefit is hardware- and workload-dependent, not automatic.
+- **Distillation** produces the smallest models by a wide margin (~150× smaller than the CNN-ViT teacher, ~2.5ms latency either way) — but this run's hard-label-only baseline student now clearly beats the distilled student (99.92% vs. 99.17% accuracy), a bigger gap than a previous run of this benchmark showed. The likely explanation: the teacher itself is weaker this time (97.58% on this split, down from a prior run's ~99.8%, since the CNN-ViT hybrid was retrained from scratch rather than fine-tuned from an already-tuned checkpoint — see `cnn-vit-satellite-image-classifier`) — a noisier teacher gives the student a noisier soft-label signal to learn from. `reports/figures/distillation_curves.png` shows the distilled run's validation accuracy trailing the baseline's by roughly a point throughout training, not just at the final epoch, reinforcing that this is a real training-dynamics effect and not a one-off checkpoint fluke. The lesson: distillation is only as good as its teacher.
 
 ## Getting Started
 
 ### Prerequisites
 
-- The trained FP32 PyTorch checkpoints from `ml-satellite-image-classifier` must exist at:
+- The trained FP32 PyTorch checkpoints from `cnn-vit-satellite-image-classifier` must exist at:
   ```
-  ../ml-satellite-image-classifier/models/trained/ai_capstone_pytorch_state_dict.pth
-  ../ml-satellite-image-classifier/models/trained/pytorch_cnn_vit_ai_capstone_model_state_dict.pth
+  ../cnn-vit-satellite-image-classifier/models/trained/ai_capstone_pytorch_state_dict.pth
+  ../cnn-vit-satellite-image-classifier/models/trained/pytorch_cnn_vit_ai_capstone_model_state_dict.pth
   ```
-  See [`ml-satellite-image-classifier/models/models.md`](../ml-satellite-image-classifier/models/models.md) for how to produce them.
+  See [`cnn-vit-satellite-image-classifier/models/models.md`](../cnn-vit-satellite-image-classifier/models/models.md) for how to produce them.
 
-- The satellite image dataset must be downloaded. Running any script in `ml-satellite-image-classifier/scripts/` on first run will download it automatically.
+- The satellite image dataset must be downloaded. Running any script in `cnn-vit-satellite-image-classifier/scripts/` on first run will download it automatically.
 
 ### Install
 
@@ -240,7 +240,7 @@ matplotlib>=3.8.0
 scikit-learn>=1.4.0
 ```
 
-`scikit-learn` is required transitively — it backs `binary_classification_metrics`, reused directly from `ml-satellite-image-classifier/src/metrics.py`.
+`scikit-learn` is required transitively — it backs `binary_classification_metrics`, reused directly from `cnn-vit-satellite-image-classifier/src/metrics.py`.
 
 ## Design Notes
 
@@ -252,11 +252,11 @@ scikit-learn>=1.4.0
 
 **Static quantization needs explicit `QuantStub`/`DeQuantStub`, and the CNN's `BatchNorm` layers can't be fused.** `build_satellite_cnn()` returns a bare `nn.Sequential` — eager-mode static PTQ requires quant/dequant boundaries inserted manually. More notably, its block order is `Conv2d → ReLU → MaxPool2d → BatchNorm2d` (BN after pooling, not the usual `Conv → BN → ReLU`), which `torch.ao.quantization.fuse_modules` doesn't recognize, and there is no standalone quantized `BatchNorm` kernel. `scripts/02_quantization.py` works around this by running every `BatchNorm1d`/`BatchNorm2d` in FP32, sandwiched between a `DeQuantStub`/`QuantStub` pair, while everything else (convs, linears) runs genuinely as INT8.
 
-**The CNN-ViT teacher's real hyperparameters don't match `CNN_ViT_Hybrid`'s constructor defaults.** The class defaults to `depth=6, heads=8`, but the checkpoint was actually trained with `depth=3, heads=6` (see `ml-satellite-image-classifier/scripts/08_pytorch_cnn_vit_hybrid.py`). `src/paths.py` pins the correct values as `CNN_VIT_DEPTH`/`CNN_VIT_HEADS` constants; loading with the class defaults would silently fail to align the ViT block weights.
+**The CNN-ViT teacher's real hyperparameters don't match `CNN_ViT_Hybrid`'s constructor defaults.** The class defaults to `depth=6, heads=8`, but the checkpoint was actually trained with `depth=3, heads=6` (see `cnn-vit-satellite-image-classifier/scripts/08_pytorch_cnn_vit_hybrid.py`). `src/paths.py` pins the correct values as `CNN_VIT_DEPTH`/`CNN_VIT_HEADS` constants; loading with the class defaults would silently fail to align the ViT block weights.
 
 **Canonical split.** Every accuracy/F1 number in this project uses the standalone CNN's original SEED=42 80/20 split (`src/paths.py: SPLIT_SEED`), not the CNN-ViT teacher's own training split (SEED=7331). This gives one consistent, zero-leakage held-out set for pruning/quantization (which target the CNN directly) and for the student (which trains and is evaluated on it). The one caveat: the frozen CNN-ViT teacher was originally trained on a different split, so a handful of its own past training images may reappear in this project's "training" 4,800 when it's used as a soft-label source during distillation — acceptable since the teacher itself is never the object being evaluated here.
 
-**Inference server compatibility.** The compressed PyTorch models expose the same `forward(x: Tensor) -> Tensor` interface as the originals. Swapping them into `ml-satellite-image-classifier/serve/model_registry.py` requires only pointing `_MODEL_FILES` at the new checkpoint paths.
+**Inference server compatibility.** The compressed PyTorch models expose the same `forward(x: Tensor) -> Tensor` interface as the originals. Swapping them into `cnn-vit-satellite-image-classifier/serve/model_registry.py` requires only pointing `_MODEL_FILES` at the new checkpoint paths.
 
 ## Future Work
 
@@ -264,7 +264,7 @@ scikit-learn>=1.4.0
 - **Quantization-aware training (QAT)**: `torch.ao.quantization.prepare_qat` + training loop with fake-quantization nodes; expected to close the accuracy gap vs. PTQ at high compression ratios
 - **TorchScript / ONNX export**: export the best compressed model to ONNX and benchmark with ONNX Runtime (`onnxruntime-cpu`), which often yields additional latency gains through graph-level optimizations
 - **4-bit NF4 quantization with `bitsandbytes`**: relevant for the ViT variant; extends the benchmark to sub-8-bit regimes
-- **End-to-end inference server benchmark**: replace the FP32 model in `ml-satellite-image-classifier/serve/` with each compressed variant and report `/predict` endpoint latency under load with `locust` or `wrk`
+- **End-to-end inference server benchmark**: replace the FP32 model in `cnn-vit-satellite-image-classifier/serve/` with each compressed variant and report `/predict` endpoint latency under load with `locust` or `wrk`
 
 ## References
 

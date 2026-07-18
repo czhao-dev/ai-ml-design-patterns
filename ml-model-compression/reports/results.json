@@ -3,10 +3,10 @@
     "variant": "PyTorch CNN (FP32 baseline)",
     "technique": "Baseline",
     "accuracy": 0.9991666666666666,
-    "f1": 0.9991311902693311,
+    "f1": 0.9991326973113617,
     "size_mb": 74.71851539611816,
-    "latency_ms": 4.073515333991963,
-    "throughput_ips": 245.48821300741736
+    "latency_ms": 28.585718359999987,
+    "throughput_ips": 34.98250375961517
   },
   {
     "variant": "PyTorch CNN \u2014 pruned 20% (unstructured)",
@@ -14,65 +14,65 @@
     "prune_type": "unstructured",
     "sparsity": 0.2,
     "accuracy": 0.9991666666666666,
-    "f1": 0.9991311902693311,
+    "f1": 0.9991326973113617,
     "size_mb": 74.71851539611816,
-    "latency_ms": 4.143455166020431,
-    "throughput_ips": 241.34447216921308
+    "latency_ms": 28.020143448,
+    "throughput_ips": 35.68861101142497
   },
   {
     "variant": "PyTorch CNN \u2014 pruned 40% (unstructured)",
     "technique": "Pruning",
     "prune_type": "unstructured",
     "sparsity": 0.4,
-    "accuracy": 0.9983333333333333,
-    "f1": 0.9982608695652174,
+    "accuracy": 1.0,
+    "f1": 1.0,
     "size_mb": 74.71851539611816,
-    "latency_ms": 4.225826333975419,
-    "throughput_ips": 236.64010798552061
+    "latency_ms": 28.12535420400002,
+    "throughput_ips": 35.55510777737259
   },
   {
     "variant": "PyTorch CNN \u2014 pruned 60% (unstructured)",
     "technique": "Pruning",
     "prune_type": "unstructured",
     "sparsity": 0.6,
-    "accuracy": 0.9908333333333333,
-    "f1": 0.9903593339176161,
+    "accuracy": 0.9991666666666666,
+    "f1": 0.9991311902693311,
     "size_mb": 74.71851539611816,
-    "latency_ms": 4.116233416018076,
-    "throughput_ips": 242.94054756675357
+    "latency_ms": 28.341219548000026,
+    "throughput_ips": 35.28429672217714
   },
   {
     "variant": "PyTorch CNN \u2014 pruned 80% (unstructured)",
     "technique": "Pruning",
     "prune_type": "unstructured",
     "sparsity": 0.8,
-    "accuracy": 0.5525,
-    "f1": 0.12682926829268293,
+    "accuracy": 0.9425,
+    "f1": 0.9362880886426593,
     "size_mb": 74.71851539611816,
-    "latency_ms": 4.120904666022398,
-    "throughput_ips": 242.6651623963011
+    "latency_ms": 12.92123196600005,
+    "throughput_ips": 77.3920012140734
   },
   {
     "variant": "PyTorch CNN \u2014 pruned 20% (structured)",
     "technique": "Pruning",
     "prune_type": "structured",
     "sparsity": 0.2,
-    "accuracy": 0.7766666666666666,
-    "f1": 0.6968325791855203,
+    "accuracy": 0.9758333333333333,
+    "f1": 0.9743589743589743,
     "size_mb": 49.161142349243164,
-    "latency_ms": 3.1458809999749064,
-    "throughput_ips": 317.8759781466548
+    "latency_ms": 19.64598364999995,
+    "throughput_ips": 50.900989118964404
   },
   {
     "variant": "PyTorch CNN \u2014 pruned 40% (structured)",
     "technique": "Pruning",
     "prune_type": "structured",
     "sparsity": 0.4,
-    "accuracy": 0.52,
-    "f1": 0.0,
+    "accuracy": 0.5341666666666667,
+    "f1": 0.05733558178752108,
     "size_mb": 28.858407974243164,
-    "latency_ms": 2.126272331981454,
-    "throughput_ips": 470.3066417969654
+    "latency_ms": 6.652741989999981,
+    "throughput_ips": 150.31396099580328
   },
   {
     "variant": "PyTorch CNN \u2014 pruned 60% (structured)",
@@ -82,8 +82,8 @@
     "accuracy": 0.52,
     "f1": 0.0,
     "size_mb": 13.955392837524414,
-    "latency_ms": 1.0391539180418476,
-    "throughput_ips": 962.3213487799495
+    "latency_ms": 3.773660970000037,
+    "throughput_ips": 264.9946584894165
   },
   {
     "variant": "PyTorch CNN \u2014 pruned 80% (structured)",
@@ -93,54 +93,54 @@
     "accuracy": 0.52,
     "f1": 0.0,
     "size_mb": 4.335947036743164,
-    "latency_ms": 0.5063545000157319,
-    "throughput_ips": 1974.9009833405867
+    "latency_ms": 2.123613503999991,
+    "throughput_ips": 470.8954798584688
   },
   {
     "variant": "PyTorch CNN-ViT (FP32 baseline)",
     "technique": "Baseline",
-    "accuracy": 0.9983333333333333,
-    "f1": 0.9982638888888888,
+    "accuracy": 0.9758333333333333,
+    "f1": 0.9754445385266723,
     "size_mb": 150.95486545562744,
-    "latency_ms": 8.813917667954229,
-    "throughput_ips": 113.45692547546872
+    "latency_ms": 17.998655004000057,
+    "throughput_ips": 55.55970708798841
   },
   {
     "variant": "PyTorch CNN \u2014 INT8 static PTQ",
     "technique": "Quantization",
     "qscheme": "static",
-    "accuracy": 1.0,
-    "f1": 1.0,
-    "size_mb": 18.75956153869629,
-    "latency_ms": 2.23392041597981,
-    "throughput_ips": 447.6435207121711
+    "accuracy": 0.9991666666666666,
+    "f1": 0.9991326973113617,
+    "size_mb": 18.8255558013916,
+    "latency_ms": 3.2948905739999645,
+    "throughput_ips": 303.5002157252251
   },
   {
     "variant": "PyTorch CNN-ViT \u2014 INT8 dynamic PTQ",
     "technique": "Quantization",
     "qscheme": "dynamic",
-    "accuracy": 0.9983333333333333,
-    "f1": 0.9982638888888888,
-    "size_mb": 90.20925807952881,
-    "latency_ms": 5.656401000043843,
-    "throughput_ips": 176.79086047687372
+    "accuracy": 0.975,
+    "f1": 0.9746192893401016,
+    "size_mb": 90.20962429046631,
+    "latency_ms": 31.13683272200001,
+    "throughput_ips": 32.116304472209244
   },
   {
     "variant": "StudentCNN (hard labels only)",
     "technique": "Distillation",
-    "accuracy": 1.0,
-    "f1": 1.0,
+    "accuracy": 0.9991666666666666,
+    "f1": 0.9991311902693311,
     "size_mb": 0.9980754852294922,
-    "latency_ms": 0.6120197499985807,
-    "throughput_ips": 1633.9341990226935
+    "latency_ms": 2.5476216219994967,
+    "throughput_ips": 392.5229678397656
   },
   {
     "variant": "StudentCNN (distilled from CNN-ViT)",
     "technique": "Distillation",
-    "accuracy": 0.9991666666666666,
-    "f1": 0.9991311902693311,
+    "accuracy": 0.9916666666666667,
+    "f1": 0.9913941480206541,
     "size_mb": 0.9980754852294922,
-    "latency_ms": 0.5911455000168644,
-    "throughput_ips": 1691.630909770051
+    "latency_ms": 2.5545323559999815,
+    "throughput_ips": 391.4610819672105
   }
 ]

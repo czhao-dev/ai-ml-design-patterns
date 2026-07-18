@@ -4,20 +4,20 @@ Full run log for all compression techniques. Regenerated automatically each time
 
 | Model | Compression | Accuracy | F1 | Size (MB) | Latency (ms/img) | Throughput (img/s) |
 |---|---|---:|---:|---:|---:|---:|
-| PyTorch CNN (FP32 baseline) | Baseline | 99.92% | 0.9991 | 74.72 | 4.074 | 245.5 |
-| PyTorch CNN-ViT (FP32 baseline) | Baseline | 99.83% | 0.9983 | 150.95 | 8.814 | 113.5 |
-| StudentCNN (distilled from CNN-ViT) | Distillation | 99.92% | 0.9991 | 1.00 | 0.591 | 1691.6 |
-| StudentCNN (hard labels only) | Distillation | 100.00% | 1.0000 | 1.00 | 0.612 | 1633.9 |
-| PyTorch CNN — pruned 20% (structured) | Pruning | 77.67% | 0.6968 | 49.16 | 3.146 | 317.9 |
-| PyTorch CNN — pruned 20% (unstructured) | Pruning | 99.92% | 0.9991 | 74.72 | 4.143 | 241.3 |
-| PyTorch CNN — pruned 40% (structured) | Pruning | 52.00% | 0.0000 | 28.86 | 2.126 | 470.3 |
-| PyTorch CNN — pruned 40% (unstructured) | Pruning | 99.83% | 0.9983 | 74.72 | 4.226 | 236.6 |
-| PyTorch CNN — pruned 60% (structured) | Pruning | 52.00% | 0.0000 | 13.96 | 1.039 | 962.3 |
-| PyTorch CNN — pruned 60% (unstructured) | Pruning | 99.08% | 0.9904 | 74.72 | 4.116 | 242.9 |
-| PyTorch CNN — pruned 80% (structured) | Pruning | 52.00% | 0.0000 | 4.34 | 0.506 | 1974.9 |
-| PyTorch CNN — pruned 80% (unstructured) | Pruning | 55.25% | 0.1268 | 74.72 | 4.121 | 242.7 |
-| PyTorch CNN — INT8 static PTQ | Quantization | 100.00% | 1.0000 | 18.76 | 2.234 | 447.6 |
-| PyTorch CNN-ViT — INT8 dynamic PTQ | Quantization | 99.83% | 0.9983 | 90.21 | 5.656 | 176.8 |
+| PyTorch CNN (FP32 baseline) | Baseline | 99.92% | 0.9991 | 74.72 | 28.586 | 35.0 |
+| PyTorch CNN-ViT (FP32 baseline) | Baseline | 97.58% | 0.9754 | 150.95 | 17.999 | 55.6 |
+| StudentCNN (distilled from CNN-ViT) | Distillation | 99.17% | 0.9914 | 1.00 | 2.555 | 391.5 |
+| StudentCNN (hard labels only) | Distillation | 99.92% | 0.9991 | 1.00 | 2.548 | 392.5 |
+| PyTorch CNN — pruned 20% (structured) | Pruning | 97.58% | 0.9744 | 49.16 | 19.646 | 50.9 |
+| PyTorch CNN — pruned 20% (unstructured) | Pruning | 99.92% | 0.9991 | 74.72 | 28.020 | 35.7 |
+| PyTorch CNN — pruned 40% (structured) | Pruning | 53.42% | 0.0573 | 28.86 | 6.653 | 150.3 |
+| PyTorch CNN — pruned 40% (unstructured) | Pruning | 100.00% | 1.0000 | 74.72 | 28.125 | 35.6 |
+| PyTorch CNN — pruned 60% (structured) | Pruning | 52.00% | 0.0000 | 13.96 | 3.774 | 265.0 |
+| PyTorch CNN — pruned 60% (unstructured) | Pruning | 99.92% | 0.9991 | 74.72 | 28.341 | 35.3 |
+| PyTorch CNN — pruned 80% (structured) | Pruning | 52.00% | 0.0000 | 4.34 | 2.124 | 470.9 |
+| PyTorch CNN — pruned 80% (unstructured) | Pruning | 94.25% | 0.9363 | 74.72 | 12.921 | 77.4 |
+| PyTorch CNN — INT8 static PTQ | Quantization | 99.92% | 0.9991 | 18.83 | 3.295 | 303.5 |
+| PyTorch CNN-ViT — INT8 dynamic PTQ | Quantization | 97.50% | 0.9746 | 90.21 | 31.137 | 32.1 |
 
 ## Notes
 
