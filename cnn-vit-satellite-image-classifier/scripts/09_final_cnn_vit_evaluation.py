@@ -53,34 +53,25 @@ except Exception as e:
     tar_path = os.path.join(data_dir, file_name)
     asyncio.run(download_tar_dataset(dataset_url, tar_path, data_dir))
 
-async def download_model(url, model_path):
-    if not os.path.exists(model_path):
-        try:
-            print(f"Downloading from {url}...")
-            import httpx
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, follow_redirects=True)
-                response.raise_for_status()
-                with open(model_path, "wb") as f:
-                    f.write(response.content)
-            print(f"Successfully downloaded '{model_path}'.")
-        except Exception as e:
-            print(f"Download error: {e}")
-    else:
-        print(f"Model file already downloaded at: {model_path}")
-
 data_dir = "."
 
-keras_model_url = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/7uNMQhNyTA8qSSDGn5Cc7A/keras-cnn-vit-ai-capstone.keras"
+# Locally-trained CNN-ViT hybrids from scripts/07_keras_cnn_vit_hybrid.py and
+# scripts/08_pytorch_cnn_vit_hybrid.py -- no pretrained weights are downloaded
+# here, so these files must already exist in this working directory.
 keras_model_name = "keras_cnn_vit_ai_capstone.keras"
 keras_model_path = os.path.join(data_dir, keras_model_name)
 
-pytorch_state_dict_url = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/rFBrDlu1NNcAzir5Uww8eg/pytorch-cnn-vit-ai-capstone-model-state-dict.pth"
 pytorch_state_dict_name = "pytorch_cnn_vit_ai_capstone_model_state_dict.pth"
 pytorch_state_dict_path = os.path.join(data_dir, pytorch_state_dict_name)
 
-asyncio.run(download_model(keras_model_url, keras_model_path))
-asyncio.run(download_model(pytorch_state_dict_url, pytorch_state_dict_path))
+if not os.path.exists(keras_model_path):
+    raise FileNotFoundError(
+        f"{keras_model_path} not found -- run scripts/07_keras_cnn_vit_hybrid.py first."
+    )
+if not os.path.exists(pytorch_state_dict_path):
+    raise FileNotFoundError(
+        f"{pytorch_state_dict_path} not found -- run scripts/08_pytorch_cnn_vit_hybrid.py first."
+    )
 
 
 import warnings
