@@ -32,12 +32,12 @@ THEMES = {
 # held-out validation split (1,200 images, 20% of images_dataSAT).
 MODELS = ["Keras CNN", "PyTorch CNN", "Keras CNN-ViT\nHybrid", "PyTorch CNN-ViT\nHybrid"]
 METRICS = {
-    "Accuracy": [0.9933, 0.9983, 0.9942, 0.9967],
-    "Precision": [1.0000, 0.9965, 0.9966, 0.9983],
-    "Recall": [0.9867, 1.0000, 0.9917, 0.9950],
-    "F1 Score": [0.9933, 0.9983, 0.9942, 0.9967],
+    "Accuracy": [0.9925, 0.9992, 0.9917, 0.9750],
+    "Precision": [1.0000, 0.9983, 1.0000, 0.9539],
+    "Recall": [0.9850, 1.0000, 0.9833, 0.9983],
+    "F1 Score": [0.9924, 0.9991, 0.9916, 0.9756],
 }
-LOSS = [0.0257, 0.0041, 0.1138, 0.0104]
+LOSS = [0.0259, 0.0031, 0.1362, 0.0662]
 
 
 def style_axes(ax, t):
@@ -80,7 +80,8 @@ def plot_metric_comparison(theme_name):
     ax.set_xticks(x)
     ax.set_xticklabels(MODELS)
     ax.set_ylabel("Score (held-out validation split)")
-    ax.set_ylim(0.97, 1.005)
+    y_min = min(v for vals in METRICS.values() for v in vals)
+    ax.set_ylim(max(0.0, y_min - 0.02), 1.005)
     add_title(
         fig,
         "Model comparison: accuracy, precision, recall, F1",

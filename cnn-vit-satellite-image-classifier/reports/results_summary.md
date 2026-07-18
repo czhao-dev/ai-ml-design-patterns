@@ -15,18 +15,18 @@ Classify satellite image tiles into agricultural and non-agricultural land categ
 
 | Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC | Loss |
 |---|---:|---:|---:|---:|---:|---:|
-| Keras CNN | 0.9933 | 1.0000 | 0.9867 | 0.9933 | 1.0000 | 0.0257 |
-| PyTorch CNN | 0.9983 | 0.9965 | 1.0000 | 0.9983 | 1.0000 | 0.0041 |
-| Keras CNN-ViT Hybrid | 0.9942 | 0.9966 | 0.9917 | 0.9942 | 0.9991 | 0.1138 |
-| PyTorch CNN-ViT Hybrid | 0.9967 | 0.9983 | 0.9950 | 0.9967 | 0.9999 | 0.0104 |
+| Keras CNN | 0.9925 | 1.0000 | 0.9850 | 0.9924 | 0.9999 | 0.0259 |
+| PyTorch CNN | 0.9992 | 0.9983 | 1.0000 | 0.9991 | 1.0000 | 0.0031 |
+| Keras CNN-ViT Hybrid | 0.9917 | 1.0000 | 0.9833 | 0.9916 | 0.9834 | 0.1362 |
+| PyTorch CNN-ViT Hybrid | 0.9750 | 0.9539 | 0.9983 | 0.9756 | 0.9997 | 0.0662 |
 
-> **Methodology note:** These numbers come from evaluating each model on its held-out validation split only (1,200 images, 20% of `images_dataSAT`) — the same split reserved during training and never seen by that model's weights. `scripts/06_keras_vs_pytorch_cnn_comparison.py` and `scripts/09_final_cnn_vit_evaluation.py` reconstruct this split using the exact seed/`validation_split` parameters from the corresponding training script (`04`, `05`, `07`, `08`), so no training image is re-scored. Earlier versions of this table evaluated over the full 6,000-image dataset, which leaked training data into the metrics — the corrected numbers above are close to the old ones because the held-out split was already used for checkpoint selection during training, not because the leak didn't matter.
+> **Methodology note:** These numbers come from evaluating each model on its held-out validation split only (1,200 images, 20% of `images_dataSAT`) — the same split reserved during training and never seen by that model's weights. `scripts/06_keras_vs_pytorch_cnn_comparison.py` and `scripts/09_final_cnn_vit_evaluation.py` reconstruct this split using the exact seed/`validation_split` parameters from the corresponding training script (`04`, `05`, `07`, `08`), so no training image is re-scored. All four checkpoints were trained from scratch end-to-end on a GCP T4 GPU VM (20 epochs for each CNN baseline, then a frozen-backbone transformer head trained for 3 epochs Keras / 5 epochs PyTorch on top) — no pretrained weights were downloaded from IBM's course storage at any stage, unlike earlier runs of this table.
 
 ## Interpretation
 
-All models performed strongly on the balanced satellite image dataset. The PyTorch CNN and PyTorch CNN-ViT hybrid produced the highest overall scores in these recorded runs.
+The CNN baselines were already highly effective on their own — local visual patterns (color, texture) in the satellite tiles are strong indicators of agricultural land, and both frameworks' from-scratch CNNs cleared 99% accuracy on the held-out split (PyTorch CNN reached 99.92%, the strongest single model here).
 
-The CNN baselines were already highly effective, suggesting that local visual patterns in the satellite tiles are strong indicators of agricultural land. The CNN-ViT hybrids add a transformer component that can model broader spatial relationships, which is useful for land-use imagery where texture, field boundaries, and larger spatial patterns can matter together.
+Genuinely retraining the CNN-ViT hybrids (instead of fine-tuning IBM's already-tuned checkpoint) tells a more interesting story than the CNN baselines alone: the Keras hybrid held nearly steady with its CNN counterpart (99.17% accuracy), but the PyTorch hybrid dropped to 97.50% accuracy with a lower precision (95.39%) than any other model in this table. Both hybrids freeze the CNN backbone and only train a randomly-initialized transformer head, for a handful of epochs (3 Keras, 5 PyTorch) — a useful, honest data point that a from-scratch hybrid isn't automatically an improvement over the CNN baseline within this small training budget, and that the two frameworks' hybrids don't converge equally fast under it.
 
 ## Key Takeaways
 

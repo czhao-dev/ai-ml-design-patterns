@@ -28,6 +28,7 @@ Binary classification of satellite image tiles as **agricultural** or **non-agri
 - Parallel Keras and PyTorch implementations for data pipelines, CNN baselines, and CNN-ViT hybrids
 - Cross-framework evaluation using accuracy, precision, recall, F1, ROC-AUC, loss, and confusion matrices
 - Held-out validation methodology: an earlier version of this project scored models against the full training set; the evaluation pipeline was corrected to score only each model's untouched validation split (see [Results](#results))
+- All four models are trained from scratch end-to-end (no pretrained weights downloaded from IBM's course storage at any stage)
 - FastAPI inference server serving all four models via a `?model=` query parameter, with Docker Compose for one-command deployment
 
 ## Repository Structure
@@ -132,26 +133,26 @@ flowchart LR
 
 | Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC |
 |---|---:|---:|---:|---:|---:|
-| Keras CNN | 0.9933 | 1.0000 | 0.9867 | 0.9933 | 1.0000 |
-| PyTorch CNN | 0.9983 | 0.9965 | 1.0000 | 0.9983 | 1.0000 |
-| Keras CNN-ViT Hybrid | 0.9942 | 0.9966 | 0.9917 | 0.9942 | 0.9991 |
-| PyTorch CNN-ViT Hybrid | 0.9967 | 0.9983 | 0.9950 | 0.9967 | 0.9999 |
+| Keras CNN | 0.9925 | 1.0000 | 0.9850 | 0.9924 | 0.9999 |
+| PyTorch CNN | 0.9992 | 0.9983 | 1.0000 | 0.9991 | 1.0000 |
+| Keras CNN-ViT Hybrid | 0.9917 | 1.0000 | 0.9833 | 0.9916 | 0.9834 |
+| PyTorch CNN-ViT Hybrid | 0.9750 | 0.9539 | 0.9983 | 0.9756 | 0.9997 |
 
-The PyTorch models edged out their Keras counterparts in these runs, with the PyTorch CNN-ViT hybrid reaching 99.67% held-out accuracy.
+All four models were trained from scratch end-to-end on a GCP T4 GPU VM, with no pretrained weights downloaded from IBM's course storage at any stage. The PyTorch CNN baseline was the strongest model overall (99.92% held-out accuracy); the PyTorch CNN-ViT hybrid was the weakest (97.50%), trailing its own CNN backbone by over two points.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="reports/model_metric_comparison_dark.png">
-  <img src="reports/model_metric_comparison_light.png" alt="Grouped bar chart of accuracy, precision, recall, and F1 score for all four models, y-axis zoomed to 0.97-1.005. PyTorch CNN and PyTorch CNN-ViT hybrid have the most balanced high scores; Keras CNN has the lowest recall (98.67%) despite perfect precision.">
+  <img src="reports/model_metric_comparison_light.png" alt="Grouped bar chart of accuracy, precision, recall, and F1 score for all four models. PyTorch CNN has the most balanced high scores; PyTorch CNN-ViT hybrid has the lowest precision (95.39%) and lowest accuracy/F1 of the four models.">
 </picture>
 
-All four models cluster tightly between 98.7% and 100% on every metric. The clearest separation is recall: Keras CNN misses the most positives (98.67%) despite perfect precision (100%), while PyTorch CNN has perfect recall (100%) with slightly lower precision (99.65%) -- a precision/recall trade-off in opposite directions between the two frameworks' CNN baselines.
+The CNN baselines cluster tightly at 99.2%-99.9% on every metric, but the hybrids diverge more once both are genuinely retrained: the Keras hybrid nearly matches its own CNN backbone, while the PyTorch hybrid falls noticeably behind on precision and accuracy. Both hybrids only train a randomly-initialized transformer head for a handful of epochs (3 Keras, 5 PyTorch) on top of a frozen CNN backbone, so this isn't a fully-converged comparison -- it's an honest look at what a small transfer-learning budget buys you over the CNN baseline alone.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="reports/model_loss_comparison_dark.png">
-  <img src="reports/model_loss_comparison_light.png" alt="Bar chart of validation loss per model. PyTorch CNN has the lowest loss (0.0041), followed by PyTorch CNN-ViT hybrid (0.0104) and Keras CNN (0.0257); Keras CNN-ViT hybrid has the highest loss by a wide margin (0.1138).">
+  <img src="reports/model_loss_comparison_light.png" alt="Bar chart of validation loss per model. PyTorch CNN has the lowest loss (0.0031); Keras CNN-ViT hybrid has the highest loss by a wide margin (0.1362), more than double the PyTorch CNN-ViT hybrid's loss (0.0662) despite scoring higher on accuracy.">
 </picture>
 
-Loss tells a different story than the accuracy-family metrics: the Keras CNN-ViT hybrid has the highest validation loss (0.1138) by more than 4x the next-highest model, despite scoring within 0.4 points of accuracy of the others. Loss reflects prediction confidence, not just the final classification decision, so this model's correct predictions are apparently made with less margin than the other three.
+Loss tells a different story than the accuracy-family metrics: the Keras CNN-ViT hybrid has the highest validation loss (0.1362) even though its accuracy (99.17%) beats the PyTorch hybrid's (97.50%). Loss reflects prediction confidence, not just the final classification decision, so the Keras hybrid's correct predictions are apparently made with less margin than its accuracy alone suggests.
 
 > **Methodology note:** These numbers come from evaluating each model on its held-out validation split only (1,200 images, 20% of `images_dataSAT`) — the same split reserved during training and never seen by that model's weights. See [`reports/results_summary.md`](reports/results_summary.md) for the full writeup, including how that split is reconstructed and an earlier methodology issue (full-dataset evaluation leaking training images into the metrics) that this corrects.
 
@@ -228,7 +229,7 @@ Tests: `pip install -r serve/requirements.txt pytest && pytest tests/`
 
 ## Project Background
 
-This project began as an IBM/Coursera deep learning capstone sequence. It has since been reorganized into a clear Python workflow with documented results, reusable helper modules, and proper handling of large data and model artifacts — including catching and fixing a data-leakage bug in the original evaluation methodology (see [Results](#results)).
+This project began as an IBM/Coursera deep learning capstone sequence. It has since been reorganized into a clear Python workflow with documented results, reusable helper modules, and proper handling of large data and model artifacts — including catching and fixing a data-leakage bug in the original evaluation methodology (see [Results](#results)), and replacing every pretrained-checkpoint download from IBM's course storage with a genuine from-scratch training run (all four models were retrained end-to-end on a GCP T4 GPU VM).
 
 ## Future Work
 
