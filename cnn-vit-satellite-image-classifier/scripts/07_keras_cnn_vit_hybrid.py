@@ -87,29 +87,18 @@ gpu_list = tf.config.list_physical_devices('GPU')
 device = "gpu" if gpu_list != [] else "cpu"
 print(f"Device available for training: {device}")
 
-async def download_model(url, model_path):
-    if not os.path.exists(model_path):
-        try:
-            print(f"Downloading from {url}...")
-            import httpx
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, follow_redirects=True)
-                response.raise_for_status()
-                with open(model_path, "wb") as f:
-                    f.write(response.content)
-            print(f"Successfully downloaded '{model_path}'.")
-        except Exception as e:
-            print(f"Download error: {e}")
-    else:
-        print(f"Model file already downloaded at: {model_path}")
-
 data_dir = "."
 
-keras_model_url = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/U-uPeyCyOQYh0GrZPGsqoQ/ai-capstone-keras-best-model-model.keras"
-keras_model_name = "ai-capstone-keras-best-model-model_downloaded.keras"
+# Locally-trained CNN backbone from scripts/04_keras_cnn_classifier.py -- no
+# pretrained weights are downloaded here, so this file must already exist in
+# this working directory.
+keras_model_name = "ai_capstone_keras_best_model.model.keras"
 keras_model_path = os.path.join(data_dir, keras_model_name)
 
-asyncio.run(download_model(keras_model_url, keras_model_path))
+if not os.path.exists(keras_model_path):
+    raise FileNotFoundError(
+        f"{keras_model_path} not found -- run scripts/04_keras_cnn_classifier.py first."
+    )
 
 # Set seed for reproducibility
 seed_value = 7331
@@ -250,7 +239,7 @@ class CustomPrintCallback(tf.keras.callbacks.Callback):
         print(f"Epoch {(epoch + 1):02d} completed on {present_time()}")
 time_print_callback = CustomPrintCallback()
 
-model_name = "keras_cnn_vit.model.keras"
+model_name = "keras_cnn_vit_ai_capstone.keras"
 # Save only weights to overcome the serialization issues with the hybrid model. The full model can be saved using the model architecture and weights.
 checkpoint_cb = ModelCheckpoint(filepath=model_name,
                                 save_weights_only=False,  # Set to True to save only weights
