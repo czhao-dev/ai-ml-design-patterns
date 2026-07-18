@@ -140,34 +140,25 @@ def print_metrics(y_true, y_pred, y_prob, class_labels, model_name):
     plt.show()
 
 
-async def download_model(url, model_path):
-    if not os.path.exists(model_path):
-        try:
-            print(f"Downloading from {url}...")
-            import httpx
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, follow_redirects=True)
-                response.raise_for_status()
-                with open(model_path, "wb") as f:
-                    f.write(response.content)
-            print(f"Successfully downloaded '{model_path}'.")
-        except Exception as e:
-            print(f"Download error: {e}")
-    else:
-        print(f"Model file already downloaded at: {model_path}")
-
 data_dir = "."
 
-keras_model_url = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/U-uPeyCyOQYh0GrZPGsqoQ/ai-capstone-keras-best-model-model.keras"
-keras_model_name = "ai-capstone-keras-best-model-model_downloaded.keras"
+# Locally-trained checkpoints from scripts/04_keras_cnn_classifier.py and
+# scripts/05_pytorch_cnn_classifier.py -- no pretrained weights are downloaded
+# here, so these files must already exist in this working directory.
+keras_model_name = "ai_capstone_keras_best_model.model.keras"
 keras_model_path = os.path.join(data_dir, keras_model_name)
 
-pytorch_state_dict_url = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/8J2QEyQqD8x9zjrlnv6N7g/ai-capstone-pytorch-best-model-20250713.pth"
-pytorch_state_dict_name = "ai_capstone_pytorch_best_model_state_dict_downloaded.pth"
+pytorch_state_dict_name = "ai_capstone_pytorch_state_dict.pth"
 pytorch_state_dict_path = os.path.join(data_dir, pytorch_state_dict_name)
 
-asyncio.run(download_model(keras_model_url, keras_model_path))
-asyncio.run(download_model(pytorch_state_dict_url, pytorch_state_dict_path))
+if not os.path.exists(keras_model_path):
+    raise FileNotFoundError(
+        f"{keras_model_path} not found -- run scripts/04_keras_cnn_classifier.py first."
+    )
+if not os.path.exists(pytorch_state_dict_path):
+    raise FileNotFoundError(
+        f"{pytorch_state_dict_path} not found -- run scripts/05_pytorch_cnn_classifier.py first."
+    )
 
 dataset_path = os.path.join(data_dir, "images_dataSAT")
 print(dataset_path)
