@@ -5,9 +5,10 @@ Two architectures are defined here:
   SatelliteCNN   — the standalone CNN trained in script 05, saved as an
                    nn.Sequential state dict (keys are plain integers).
 
-  CNN_ViT_Hybrid — the CNN-ViT hybrid trained in script 08, whose CNN
-                   backbone weights are stored under the "cnn.features.*"
-                   key prefix (stripped during loading).
+  CNN_ViT_Hybrid — the CNN-ViT hybrid trained in script 08, saved directly
+                   from a CNN_ViT_Hybrid instance's state dict, so its keys
+                   ("cnn.features.*", "vit.*") already match this class's
+                   own state dict with no remapping needed.
 """
 
 from __future__ import annotations

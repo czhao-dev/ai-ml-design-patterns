@@ -93,23 +93,18 @@ class ModelRegistry:
             name="pytorch_cnn",
             model=build_satellite_cnn(num_classes=2),
             strict=True,
-            key_prefix=None,
         )
-        # CNN-ViT hybrid (CNN backbone weights saved under "cnn.*" prefix)
+        # CNN-ViT hybrid. Its state dict is saved directly from a
+        # CNN_ViT_Hybrid instance (self.cnn / self.vit attributes), so its
+        # keys ("cnn.features.*", "vit.*") already match this class's own
+        # state dict one-for-one -- no prefix remapping needed.
         self._load_pytorch(
             name="pytorch_vit",
             model=CNN_ViT_Hybrid(num_classes=2),
             strict=False,
-            key_prefix="cnn.",
         )
 
-    def _load_pytorch(
-        self,
-        name: str,
-        model: torch.nn.Module,
-        strict: bool,
-        key_prefix: str | None,
-    ) -> None:
+    def _load_pytorch(self, name: str, model: torch.nn.Module, strict: bool) -> None:
         path = self.model_dir / _MODEL_FILES[name]
         if not path.exists():
             logger.warning("Model file not found, skipping: %s", path)
@@ -119,24 +114,10 @@ class ModelRegistry:
             # Unwrap common checkpoint wrappers
             if isinstance(state_dict, dict) and "state_dict" in state_dict:
                 state_dict = state_dict["state_dict"]
+            # Strip DataParallel's "module." prefix, if present.
+            state_dict = {k.removeprefix("module."): v for k, v in state_dict.items()}
 
-            if not strict and key_prefix is not None:
-                # Strip "module." and the given prefix so keys align with the
-                # model's state dict (used for the CNN-ViT hybrid backbone).
-                cleaned: dict[str, torch.Tensor] = {}
-                model_keys = set(model.state_dict())
-                for k, v in state_dict.items():
-                    k = k.removeprefix("module.").removeprefix(key_prefix)
-                    if k in model_keys and model.state_dict()[k].shape == v.shape:
-                        cleaned[k] = v
-                missing, unexpected = model.load_state_dict(cleaned, strict=False)
-                if missing:
-                    logger.debug("%s: %d tensors at init defaults", name, len(missing))
-                if unexpected:
-                    logger.debug("%s: %d unexpected keys ignored", name, len(unexpected))
-            else:
-                model.load_state_dict(state_dict, strict=strict)
-
+            model.load_state_dict(state_dict, strict=strict)
             model.to(self._device).eval()
             self._models[name] = model
             logger.info("Loaded %s", name)
