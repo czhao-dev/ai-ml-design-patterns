@@ -88,15 +88,11 @@ import matplotlib.pyplot as plt
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-import tensorflow as tf
-from tensorflow.keras import layers
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import load_model
-
-gpu_list = tf.config.list_physical_devices('GPU')
-device = "gpu" if gpu_list != [] else "cpu"
-print(f"TensorFlow {tf.__version__}  |  GPUs found: {tf.config.list_physical_devices('GPU')}")
-
+# PyTorch must be imported (and claim its CUDA context) before TensorFlow --
+# importing TF first and torch second segfaults on this stack (TF 2.21 /
+# torch 2.13, both linking their own bundled CUDA/cuDNN) once TF has already
+# initialized the GPU. scripts/06 does this in the working order; mirror it
+# here.
 import torch
 import torch.nn as nn
 #import torch.optim as optim
@@ -105,6 +101,15 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from torch.utils.data import  random_split
 import torch.nn.functional as F
+
+import tensorflow as tf
+from tensorflow.keras import layers
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import load_model
+
+gpu_list = tf.config.list_physical_devices('GPU')
+device = "gpu" if gpu_list != [] else "cpu"
+print(f"TensorFlow {tf.__version__}  |  GPUs found: {tf.config.list_physical_devices('GPU')}")
 
 print("Imported libraries")
 
