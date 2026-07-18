@@ -13,8 +13,8 @@ A monorepo of ten end-to-end machine learning projects spanning computer vision,
 | [Churn Predictor](churn-predictor/README.md) | Causal Inference / Uplift Modeling | scikit-learn, EconML | Causal forest is the only model to beat random targeting (Qini +369); targeted policy cuts net losses 98.5% vs. blanket offers |
 | [Tiny LLM GPT](tiny-llm-gpt/README.md) | Language Modeling | PyTorch, AWS EC2 | Tiny/Small/Medium scaling sweep — perplexity 7.11 → 5.09; Small/Medium trained on a rented cloud GPU |
 | [LLM Alignment Fine-Tuning](llm-alignment-fine-tuning/README.md) | LLM Alignment | PyTorch, TRL, HuggingFace, LoRA | Full SFT → RM → PPO RLHF → DPO pipeline, all trained locally |
-| [CNN-ViT Satellite Image Classifier](cnn-vit-satellite-image-classifier/README.md) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.83% accuracy; FastAPI server serving all four models |
-| [ML Model Compression](ml-model-compression/README.md) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher at 99.9%+ accuracy |
+| [CNN-ViT Satellite Image Classifier](cnn-vit-satellite-image-classifier/README.md) | Computer Vision | PyTorch, Keras/TF, FastAPI, Docker | 99.92% accuracy; FastAPI server serving all four models, all trained from scratch |
+| [ML Model Compression](ml-model-compression/README.md) | Model Compression | PyTorch, `torch.ao.quantization` | Distilled student ~150× smaller than its teacher (99.2% accuracy); INT8 quantization cuts the CNN 4× smaller and ~8.7× faster with no accuracy loss |
 | [GNN Movie Recommender](gnn-movie-recommender/README.md) | Graph ML | PyTorch Geometric, igraph | Heterogeneous GNN benchmarked at full IMDb scale (240K movies) as well as a small sample; top-N recommendation on MovieLens |
 | [LSTM Transformer Climate Modeler](lstm-transformer-climate-modeler/README.md) | Time-Series | TensorFlow, Python | Pure-TF LSTM + Transformer from scratch (no Keras); 7-day multi-step forecasting; 56 unit tests |
 | [Tensor Graph Inference Engine](tensor-graph-inference-engine/README.md) | Systems / Inference Engine | Python, NumPy | Static-graph INT8 engine with a hand-rolled greedy arena planner cutting activation memory ~37% (39,904 vs. 63,072 bytes), fully regression-pinned |
@@ -97,9 +97,9 @@ Four LLM alignment techniques implemented end-to-end, each with its own training
 Binary classification of 64×64 satellite image tiles as agricultural vs. non-agricultural land.
 
 - **Models:** Six-block CNN (32→1024 channels, 5×5 kernels) and CNN–Vision Transformer hybrid (CNN feature map tokenized and fed through multi-head self-attention blocks), each implemented independently in both Keras/TensorFlow and PyTorch — four models total, trained and evaluated in parallel across frameworks.
-- **Results:** PyTorch CNN 99.83%, Keras CNN 99.33%, PyTorch CNN-ViT 99.67%, Keras CNN-ViT 99.42% — all on a 1,200-image held-out split never seen during training.
+- **Results:** PyTorch CNN 99.92%, Keras CNN 99.25%, PyTorch CNN-ViT 97.50%, Keras CNN-ViT 99.17% — all on a 1,200-image held-out split never seen during training, and all trained fully from scratch (no pretrained weights downloaded from IBM's course storage at any stage).
 - **Inference server:** FastAPI app (`serve/`) loads all four models at startup and exposes `/health`, `/models`, and `POST /predict?model=` endpoints. Model backend is selectable per request. Deployed with Docker Compose; model weights mounted read-only at runtime to keep the image small.
-- **Notable:** Caught and fixed a data-leakage bug in the original evaluation methodology that scored models against the full training set rather than a held-out split.
+- **Notable:** Caught and fixed a data-leakage bug in the original evaluation methodology that scored models against the full training set rather than a held-out split. Later retrained every model end-to-end on a GCP T4 GPU VM to replace what had been a partially IBM-pretrained CNN-ViT hybrid — catching two more real bugs along the way: a TensorFlow/PyTorch import-order segfault, and a checkpoint-loading bug that silently left the served CNN-ViT model's CNN backbone randomly initialized.
 
 **Stack:** Python · PyTorch · Keras/TensorFlow · FastAPI · Uvicorn · Docker Compose
 
@@ -107,11 +107,11 @@ Binary classification of 64×64 satellite image tiles as agricultural vs. non-ag
 
 ### [ML Model Compression](ml-model-compression/README.md)
 
-Three orthogonal compression techniques — pruning, post-training quantization, and knowledge distillation — benchmarked against the PyTorch CNN and CNN-ViT models trained in `ml-satellite-image-classifier`, all scored on the same fixed held-out split for a controlled comparison.
+Three orthogonal compression techniques — pruning, post-training quantization, and knowledge distillation — benchmarked against the PyTorch CNN and CNN-ViT models trained in `cnn-vit-satellite-image-classifier`, all scored on the same fixed held-out split for a controlled comparison.
 
 - **Pruning:** Unstructured global L1 magnitude pruning and structured L1 channel pruning (`torch.nn.utils.prune`), swept across 20–80% sparsity. Unstructured holds accuracy to 60% sparsity but doesn't reduce size/latency without sparse BLAS; structured produces real size/latency drops but collapses to the class prior by 40% sparsity without fine-tuning recovery — an intentionally honest "raw accuracy cliff" measurement.
-- **Quantization:** Static INT8 PTQ on the CNN (4× smaller, ~1.8× faster, no measurable accuracy loss) and dynamic INT8 PTQ on the CNN-ViT's linear layers. Required working around two undocumented gaps in the source architecture: eager-mode static quantization needs manual `QuantStub`/`DeQuantStub` insertion, and the CNN's `BatchNorm` layers (positioned after pooling, not fusable with the preceding conv) have no quantized kernel and must run in FP32 sandwiched between quant/dequant boundaries.
-- **Knowledge distillation:** A 3-block, ~259K-parameter `StudentCNN` distilled from the frozen CNN-ViT teacher (temperature-scaled KL + hard-label CE, with the standard T² gradient-scaling term) reaches 99.9%+ accuracy at ~150× smaller than the teacher and sub-millisecond CPU latency — one of several places results diverged from the initial write-up (~12× was the original estimate) once actually measured.
+- **Quantization:** Static INT8 PTQ on the CNN is the clear win (4× smaller, ~8.7× faster, no measurable accuracy loss); dynamic INT8 PTQ on the CNN-ViT's linear layers cuts size ~1.7× but was measured *slower* than FP32 on the benchmark hardware — a genuine negative result, not a bug: per-call quantize/dequantize overhead outweighs the saved matmul cost at batch size 1. Required working around two undocumented gaps in the source architecture: eager-mode static quantization needs manual `QuantStub`/`DeQuantStub` insertion, and the CNN's `BatchNorm` layers (positioned after pooling, not fusable with the preceding conv) have no quantized kernel and must run in FP32 sandwiched between quant/dequant boundaries.
+- **Knowledge distillation:** A 3-block, ~259K-parameter `StudentCNN` distilled from the frozen CNN-ViT teacher (temperature-scaled KL + hard-label CE, with the standard T² gradient-scaling term) is ~150× smaller than the teacher (1.0 MB vs. 150.95 MB FP32) — but a hard-label-only baseline student now clearly beats it (99.92% vs. 99.17% accuracy) once the teacher itself was retrained from scratch (97.58% own accuracy) rather than fine-tuned from an already-tuned checkpoint: a noisier teacher gives a noisier soft-label signal, and distillation is only as good as its teacher.
 - **Reproducibility groundwork:** Corrected the CNN-ViT's constructor defaults (`depth=6, heads=8`) against its real trained hyperparameters (`depth=3, heads=6`) before any of the above would load correctly, and standardized every technique on a single canonical held-out split.
 
 **Stack:** Python · PyTorch · `torch.ao.quantization` · torchvision · scikit-learn
@@ -166,7 +166,7 @@ Papers and resources that directly informed the techniques used across these pro
 
 **Transformers and attention**
 - Vaswani, A., et al. "Attention Is All You Need." *NeurIPS*, 2017. [arxiv.org/abs/1706.03762](https://arxiv.org/abs/1706.03762)
-- Dosovitskiy, A., et al. "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale." *ICLR*, 2021. [arxiv.org/abs/2010.11929](https://arxiv.org/abs/2010.11929) *(ml-satellite-image-classifier)*
+- Dosovitskiy, A., et al. "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale." *ICLR*, 2021. [arxiv.org/abs/2010.11929](https://arxiv.org/abs/2010.11929) *(cnn-vit-satellite-image-classifier)*
 
 **Recurrent networks and time-series forecasting**
 - Hochreiter, S., and Schmidhuber, J. "Long Short-Term Memory." *Neural Computation*, 9(8):1735–1780, 1997. [doi.org/10.1162/neco.1997.9.8.1735](https://doi.org/10.1162/neco.1997.9.8.1735) *(ml-boston-climate-modeler)*
@@ -204,8 +204,8 @@ Papers and resources that directly informed the techniques used across these pro
 - Gutierrez, P., and Gérardy, J-Y. "Causal Inference and Uplift Modelling: A Review of the Literature." *JMLR Workshop and Conference Proceedings*, 2017. *(churn-predictor)*
 
 **Transfer learning and convolutional networks**
-- Simonyan, K., and Zisserman, A. "Very Deep Convolutional Networks for Large-Scale Image Recognition." *ICLR*, 2015. [arxiv.org/abs/1409.1556](https://arxiv.org/abs/1409.1556) *(ml-satellite-image-classifier)*
-- Russakovsky, O., et al. "ImageNet Large Scale Visual Recognition Challenge." *IJCV*, 2015. [arxiv.org/abs/1409.0575](https://arxiv.org/abs/1409.0575) *(ml-satellite-image-classifier)*
+- Simonyan, K., and Zisserman, A. "Very Deep Convolutional Networks for Large-Scale Image Recognition." *ICLR*, 2015. [arxiv.org/abs/1409.1556](https://arxiv.org/abs/1409.1556) *(cnn-vit-satellite-image-classifier)*
+- Russakovsky, O., et al. "ImageNet Large Scale Visual Recognition Challenge." *IJCV*, 2015. [arxiv.org/abs/1409.0575](https://arxiv.org/abs/1409.0575) *(cnn-vit-satellite-image-classifier)*
 
 **Model compression**
 - Han, S., Pool, J., Tran, J., and Dally, W.J. "Learning Both Weights and Connections for Efficient Neural Networks." *NeurIPS*, 2015. [arxiv.org/abs/1506.02626](https://arxiv.org/abs/1506.02626) *(ml-model-compression)*
