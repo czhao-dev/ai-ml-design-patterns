@@ -134,8 +134,8 @@ class _ViT(nn.Module):
         in_channels: int = 1024,
         num_classes: int = 2,
         embed_dim: int = 768,
-        depth: int = 6,
-        heads: int = 8,
+        depth: int = 3,
+        heads: int = 6,
         mlp_ratio: float = 4.0,
         dropout: float = 0.1,
         max_tokens: int = 50,
@@ -165,7 +165,7 @@ class _ViT(nn.Module):
 class CNN_ViT_Hybrid(nn.Module):
     """End-to-end CNN-ViT hybrid classifier."""
 
-    def __init__(self, num_classes: int = 2, embed_dim: int = 768, depth: int = 6, heads: int = 8) -> None:
+    def __init__(self, num_classes: int = 2, embed_dim: int = 768, depth: int = 3, heads: int = 6) -> None:
         super().__init__()
         self.cnn = _ConvBackbone()
         self.vit = _ViT(num_classes=num_classes, embed_dim=embed_dim, depth=depth, heads=heads)
