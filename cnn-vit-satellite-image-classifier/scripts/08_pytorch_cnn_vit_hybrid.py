@@ -77,29 +77,18 @@ from torch.utils.data import DataLoader, random_split
 import torch.nn.functional as F
 print("Imported PyTorch libraries")
 
-async def download_model(url, model_path):
-    if not os.path.exists(model_path):
-        try:
-            print(f"Downloading from {url}...")
-            import httpx
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, follow_redirects=True)
-                response.raise_for_status()
-                with open(model_path, "wb") as f:
-                    f.write(response.content)
-            print(f"Successfully downloaded '{model_path}'.")
-        except Exception as e:
-            print(f"Download error: {e}")
-    else:
-        print(f"Model file already downloaded at: {model_path}")
-
 data_dir = "."
 
-pytorch_state_dict_url = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/8J2QEyQqD8x9zjrlnv6N7g/ai-capstone-pytorch-best-model-20250713.pth"
-pytorch_state_dict_name = "ai_capstone_pytorch_best_model_state_dict_downloaded.pth"
+# Locally-trained CNN backbone from scripts/05_pytorch_cnn_classifier.py -- no
+# pretrained weights are downloaded here, so this file must already exist in
+# this working directory.
+pytorch_state_dict_name = "ai_capstone_pytorch_state_dict.pth"
 pytorch_state_dict_path = os.path.join(data_dir, pytorch_state_dict_name)
 
-asyncio.run(download_model(pytorch_state_dict_url, pytorch_state_dict_path))
+if not os.path.exists(pytorch_state_dict_path):
+    raise FileNotFoundError(
+        f"{pytorch_state_dict_path} not found -- run scripts/05_pytorch_cnn_classifier.py first."
+    )
 
 def set_seed(seed: int = 42) -> None:
     """Seed Python, NumPy, and PyTorch (CPU & all GPUs) and
@@ -319,7 +308,7 @@ embed_dim  = 768
 
 print(f"epochs:{epochs} | batch:{batch_size} | attn_heads:{attn_heads} | depth:{depth} | embed_dim:{embed_dim}")
 
-model_dict_name = f"ai_capstone_pytorch_vit_model_state_dict.pth"
+model_dict_name = "pytorch_cnn_vit_ai_capstone_model_state_dict.pth"
 
 model     = CNN_ViT_Hybrid(num_classes=num_cls,
                             heads=attn_heads,
@@ -368,63 +357,6 @@ for epoch in range(1, epochs+1):
         best_loss = avg_te_loss
         torch.save(model.state_dict(), model_dict_name)
 
-print(f"epochs:{epochs} | batch:{batch_size} | attn_heads:{attn_heads} | depth:{depth} | embed_dim:{embed_dim}")
-
-device   = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Training the model on {device}")
-
-epochs     = 5
-attn_heads = 12
-depth      = 12
-embed_dim  = 768
-
-print(f"epochs:{epochs} | batch:{batch_size} | attn_heads:{attn_heads} | depth:{depth} | embed_dim:{embed_dim}")
-
-model_dict_name = f"ai_capstone_pytorch_vit_model_test_state_dict.pth"
-
-model_test = CNN_ViT_Hybrid(num_classes=num_cls,
-                            heads=attn_heads,
-                            depth=depth,
-                            embed_dim=embed_dim
-                           ).to(device)
-
-# ------------------------------------------------------------------ #
-# loading pre-trained CNN weights
-load_cnn_backbone_weights(model_test.cnn, pytorch_state_dict_path, map_location=device)
-# ------------------------------------------------------------------ #
-
-criterion= nn.CrossEntropyLoss()
-optimizer= torch.optim.Adam(model_test.parameters(), lr=lr)
-
-best_loss = float('inf')
-tr_loss_all_test = []
-te_loss_all_test = []
-tr_acc_all_test = []
-te_acc_all_test = []
-training_time_test = []
-for epoch in range(1, epochs+1):
-    start_time = time.time()
-    print(f"\nEpoch {epoch:02d}/{epochs:02d} started at {present_time()} (UTC)")
-    tr_loss,tr_acc = train(model_test, train_loader, optimizer, criterion, device)
-    te_loss,te_acc = evaluate(model_test, val_loader, criterion, device)
-    print(f"Epoch {epoch:02d} | "
-          f"train loss {tr_loss:.4f} acc {tr_acc:.4f} | "
-          f"val loss {te_loss:.4f} acc {te_acc:.4f} |"
-          f" in  {time.time()-start_time:.02f}s"
-        )
-    tr_loss_all_test.append(tr_loss)
-    te_loss_all_test.append(te_loss)
-    tr_acc_all_test.append(tr_acc)
-    te_acc_all_test.append(te_acc)
-    training_time_test.append(time.time() - start_time)
-
-    # Save the best model
-    avg_te_loss = te_loss
-    if avg_te_loss < best_loss:
-        print(f"Current loss ({avg_te_loss:.04f}) lower than previous best loss ({ best_loss:.04f}), Saving current model state")
-        best_loss = avg_te_loss
-        torch.save(model_test.state_dict(), model_dict_name)
-
 fig_w, fig_h = 6,4
 fig, axs = plt.subplots(figsize=(fig_w, fig_h ))
 
@@ -449,34 +381,6 @@ axs.plot(te_loss_all, label='Validation Loss')
 axs.set_title('Model Loss')
 axs.set_xlabel('Epochs')
 axs.set_ylabel('Loss')
-axs.legend()
-axs.grid(True)
-
-plt.tight_layout()
-plt.show()
-
-fig, axs = plt.subplots( figsize=(fig_w, fig_h ))
-
-# Plot Loss on the second subplot
-axs.plot(te_loss_all, label='Validation Loss (model)')
-axs.plot(te_loss_all_test, label='Validation Loss (model_test)')
-axs.set_title('Model Loss')
-axs.set_xlabel('Epochs')
-axs.set_ylabel('Loss')
-axs.legend()
-axs.grid(True)
-
-plt.tight_layout()
-plt.show()
-
-fig, axs = plt.subplots( figsize=(fig_w, fig_h ))
-
-# Plot Loss on the second subplot
-axs.plot(training_time, label='Training time (model)')
-axs.plot(training_time_test, label='Training time (model_test)')
-axs.set_title('Training time')
-axs.set_xlabel('Epochs')
-axs.set_ylabel('Seconds')
 axs.legend()
 axs.grid(True)
 
